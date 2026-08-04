@@ -171,26 +171,37 @@ Use `:ignore-packages` to exclude internal packages from autodoc:
                   :ignore-packages ("project/low-level" "project/objc")))
 ```
 
-## CRITICAL: Always Update Changelog
+## CRITICAL: Changelog Is for Functional Changes, Not Documentation
 
-**Every documentation change MUST be recorded in `docs/changelog.lisp`.**
+The changelog records **functional, user-visible changes** to the library or
+tool: new features, bug fixes, behavior changes, breaking changes.
+
+**Never add changelog entries for documentation work.** The changelog is itself
+documentation, so writing about documentation in it is redundant noise. None of
+these belong as changelog bullets:
+- writing, updating, or reorganizing docs/sections (`README.md`, `docs/*.lisp`)
+- adding or editing docstrings
+- fixing `build-docs` / XREF / "source location" / "not documented" warnings
+- regenerating `README.md` / `ChangeLog.md`
+
+Bullets must not start with "Documented ...", "Added a section",
+"Fixed a warning", or similar. Rule of thumb: a user who runs the library but
+never reads the docs should still find the changelog informative — if a change
+only affects generated text, it does not go in the changelog. (A newly exported
+public symbol is changelog-worthy only when it ships a new capability, not
+because it got documented.)
 
 After editing `docs/changelog.lisp`, always follow the
 "MANDATORY: Rebuild and Verify After Every Documentation Change" workflow above —
 a changelog edit only becomes visible once `build-docs` regenerates `ChangeLog.md`.
 
-This applies to:
-- Adding new sections
-- Updating existing content
-- Fixing warnings
-- Adding docstrings to source symbols (these are documentation changes)
-
-Use the `defchangelog` form with version, date, and markdown bullet points:
+Use the `defchangelog` form with version, date, and markdown bullet points that
+describe behavior, not documentation:
 
 ```lisp
 (0.2.0 2026-06-14
-       "* Added Installation and Quickstart sections.
-* Fixed XREF warnings by expanding :ignore-words list.")
+       "* Added a :FOO argument to MAKE-THING to control the output size.
+* Fixed MAKE-THING dropping the last item when :FOO was NIL.")
 ```
 
 ## Images
