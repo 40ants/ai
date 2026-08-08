@@ -18,13 +18,9 @@ It includes skills for:
 
 ## Repository Layout
 
-The APM-installable plugin bundle is located in:
+The APM-installable package is located in:
 
 - `plugins/common-lisp-skills/`
-
-The repo-local Codex marketplace entry is located in:
-
-- `.agents/plugins/marketplace.json`
 
 ## Install from GitHub with APM
 
@@ -101,22 +97,6 @@ Then run:
 apm install --target codex
 ```
 
-## Local Development and Codex Marketplace Option
-
-If you are developing this repository locally, it also includes a Codex marketplace entry for local testing.
-
-Register the repository as a local marketplace:
-
-```bash
-codex plugin marketplace add /Users/art/projects/lisp/ai
-```
-
-Then install the plugin:
-
-```bash
-codex plugin add common-lisp-skills@40Ants
-```
-
 ## Updating in Another Project
 
 If your project depends on this package through APM, rerun install in your own project:
@@ -135,9 +115,9 @@ If your agent does not pick up updated skills in the current session, start a ne
 
 ## Development Notes
 
-- Plugin manifest: `plugins/common-lisp-skills/.codex-plugin/plugin.json`
+- APM manifest: `plugins/common-lisp-skills/apm.yml`
+- Package metadata: `plugins/common-lisp-skills/plugin.json`
 - Skills directory: `plugins/common-lisp-skills/skills/`
-- Marketplace manifest: `.agents/plugins/marketplace.json`
 
 ## Local Validation
 

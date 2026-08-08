@@ -1,0 +1,9 @@
+{
+  "name": "common-lisp-skills",
+  "version": "0.1.0",
+  "description": "Reusable Common Lisp development skills for coding agents.",
+  "author": {
+    "name": "Alexander Artemenko"
+  },
+  "license": "MIT"
+}
