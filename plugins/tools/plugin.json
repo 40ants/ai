@@ -1,0 +1,9 @@
+{
+  "name": "tools",
+  "version": "0.1.0",
+  "description": "Reusable tooling skills for coding agents.",
+  "author": {
+    "name": "Alexander Artemenko"
+  },
+  "license": "MIT"
+}
