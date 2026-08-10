@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nix Playwright"
+  short_description: "Run Python Playwright via nix-shell"
+  default_prompt: "Use $nix-shell-playwright to create a nix-shell Playwright setup and run local smoke tests."
