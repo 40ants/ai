@@ -46,6 +46,20 @@ Rules:
 ## Slot accessors
 Use `:reader` / `:accessor` with `:initarg` keywords. Name accessors `session-<slot>` to avoid clashes across classes.
 
+## Slot type and initform invariant
+Every `:initform` must satisfy its slot's `:type`; strict safety settings expose
+violations during ordinary construction. For an optional string slot whose
+default is `nil`, declare the precise CLOS type:
+```lisp
+(value :type (or null string) :initarg :value :initform nil :reader item-value)
+```
+When a serializer has its own wire schema, attach that schema separately and
+keep the CLOS type precise:
+```lisp
+(value :type (or null string) :schema string
+       :required nil :initform nil :reader item-value)
+```
+
 ## Redefining `defstruct` → `defclass` in a live image
 A running image cannot just reload the file: the metaclass change is refused and the old accessors stay `fboundp`. Delete the package first, then force-reload — see **using-common-lisp-repl** for the exact `delete-package` + `load-system :force` recipe.
 

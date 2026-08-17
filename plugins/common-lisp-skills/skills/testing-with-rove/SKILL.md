@@ -67,6 +67,13 @@ After editing a test file in the REPL workflow, force just that test file instea
 (asdf:load-system "myapp-tests" :force '("myapp-tests/core"))
 ```
 
+## Strict schema and CLOS regression check
+For a changed CLOS class or schema class, add a test that constructs every
+optional-slot combination relevant to the public constructor, especially the
+case where the argument is omitted. Then run the complete suite after the
+strict compilation check from **using-common-lisp-repl**; this catches a slot
+whose `:initform` does not satisfy its declared CLOS type.
+
 ## Testing internal (`%`-prefixed) functions
 Private functions named like `%helper` cannot be referenced from the test package. To test them:
 ```lisp

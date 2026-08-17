@@ -71,6 +71,19 @@ The live image is also useful for reproducing docs and test problems when wrappe
 ```
 Treat this as a diagnostic tool. A local REPL failure caused by SSL/network access to external docs is an environment issue unless CI reproduces it.
 
+## Strict compilation check
+After changing CLOS slots or schema classes, force a complete rebuild and run
+the suite under high safety and debug settings. Scope the declaration with
+`locally`:
+```lisp
+(locally
+  (declare (optimize (debug 3) (safety 3)))
+  (asdf:load-system :myapp :force t)
+  (asdf:test-system :myapp))
+```
+Inspect source files for a lower file-local optimization declaration as well;
+it can weaken checks within that compilation unit.
+
 ## Quick Reference
 | Task | Form |
 |---|---|
