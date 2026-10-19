@@ -31,7 +31,7 @@ Includes skills for:
 - writing 40ants-doc documentation
 - avoiding common Lisp pitfalls
 - clearing stale ASDF fasl cache
-- linting Common Lisp projects with Mallet
+- linting Common Lisp projects with Mallet and 40ants-linter
 
 ### `tools`
 
