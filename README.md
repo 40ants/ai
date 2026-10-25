@@ -40,6 +40,7 @@ Includes skills for:
 - bootstrapping a reproducible Playwright environment with `nix-shell`
 - generating static smoke tests for local HTML pages
 - running local browser-based smoke tests with screenshot capture
+- deploying, updating, and rolling back 40ants pet-project services on VPS hosts (`/srv/services` scheme with Caddy and systemd isolation)
 
 ## Install from GitHub with APM
 
