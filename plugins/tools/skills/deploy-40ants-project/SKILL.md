@@ -26,9 +26,10 @@ library), install it as a new timestamped revision, atomically flip `current`,
 `systemctl restart`. Rollback = flip `current` back and restart. Nothing else
 changes: `config/` and `data/` survive deploys as-is.
 
-Canonical spec (full details, rationale, unit template): `40ants-deployment/deploy.md`
-in the Devops repository. This skill is the operational summary used from a
-project directory on a host (pilot: host `dev3`, service `pingvito`).
+This skill is the canonical deployment document for 40ants pet-project services,
+used from a project directory on a host (pilot: host `dev3`, service `pingvito`).
+It supersedes the earlier `40ants-deployment/deploy.md` draft, which is not
+published in any repository.
 
 Key invariants:
 
@@ -38,8 +39,13 @@ Key invariants:
 - Keep last N revisions per project (`revisions-to-keep`, default 3); **never**
   delete the revision `current` points to.
 - One Unix system user per service; process is sandboxed by systemd
-  (`ProtectHome=true`, `ProtectSystem=strict`, `PrivateTmp=true`,
+  (`ProtectHome=read-only`, `ProtectSystem=strict`, `PrivateTmp=true`,
   `NoNewPrivileges=true`, write access only to `data/`).
+- `ProtectHome=read-only`, not `true`: a full block on `/home` breaks
+  interactive debugging of the live image (SLY's M-. cannot `truename`
+  dev-checkout sources through SLYNK). Read-only keeps the write
+  protection (`ProtectSystem=strict`); secrets like `~/.ssh` stay behind
+  normal DAC permissions.
 
 ## When to Use
 
@@ -58,7 +64,7 @@ may describe the OLD scheme (`/opt/pingvito`, `/var/lib/pingvito`, nginx, host
 
 ## Scenario: routine deploy
 
-`lake to-prod` is being reworked to do all of this (spec §6); until it lands,
+`lake to-prod` is being reworked to do all of this; until it lands,
 run the steps manually from the project checkout on the host (`ssh dev3`,
 `cd ~/projects/<name>`). Never use the old `lake to-prod` behavior (copying the
 binary to `roswell/*-prod` inside the dev tree) — prod must not depend on
@@ -127,7 +133,7 @@ restoring `data/` from backup (SQLite: `VACUUM INTO` dumps).
 One-time per host: `sudo ufw allow 80,443/tcp`; install Caddy from the official
 apt repository (do not start it while nginx still holds 80/443).
 
-Per service (spec §3–§5, §8 has the full checklist):
+Per service (the steps below form the full checklist):
 
 ```bash
 sudo useradd --system --home /nonexistent --shell /usr/sbin/nologin <name>
@@ -142,7 +148,7 @@ sudo ln -s /srv/services/<name>/config/<name>.service /etc/systemd/system/<name>
 sudo systemctl daemon-reload && sudo systemctl enable --now <name>
 ```
 
-Unit template (spec §3): `User`/`Group` = `<name>`, `WorkingDirectory` and
+Unit template: `User`/`Group` = `<name>`, `WorkingDirectory` and
 `ExecStart` go through `/srv/services/<name>/current`, `EnvironmentFile` points
 to `config/service.env`, plus the four sandbox directives and
 `ReadWritePaths=/srv/services/<name>/data`. `data/` is 0700.
@@ -186,7 +192,9 @@ deploys, or you hit Let's Encrypt rate limits.
   `service.env` the app runs an MCP eval server on localhost; reach it through
   an SSH tunnel and inspect threads/backtraces in the running image.
 - Binary "works in dev, dies in prod" → almost always libs reachable only via
-  `/home/art` under `ProtectHome`. Check release self-sufficiency:
+  `/home/art`. With `ProtectHome=read-only` such libs now load silently, but
+  releases still must be self-sufficient: the dev checkout may move or vanish.
+  Check release self-sufficiency:
 
   ```bash
   cp -r /srv/services/<name>/current /tmp/<name>-check
