@@ -1,18 +1,19 @@
 ---
 name: avoiding-common-lisp-pitfalls
-description: Use when writing new or large Common Lisp code where subtle library or language gotchas are likely — event-emitter argument order, parenthesis imbalance in a big file, or a defmethod whose specializers may silently collide with one in a dependency. Also apply when wiring defmain subcommands.
+description: Use when writing new or large Common Lisp code where subtle library or language gotchas are likely — event-emitter argument order, parenthesis imbalance in a big file, a defmethod whose specializers may silently collide with one in a dependency, or uiop:run-program argument and output-spec misuse. Also apply when wiring defmain subcommands.
 ---
 
 # Avoiding Common Lisp Pitfalls
 
 ## Overview
-Verified, non-obvious CL traps: the `event-emitter` library's inconsistent argument order, silent CLOS method replacement, parenthesis imbalance in large files, and `defmain` subcommand quirks.
+Verified, non-obvious CL traps: the `event-emitter` library's inconsistent argument order, silent CLOS method replacement, parenthesis imbalance in large files, `defmain` subcommand quirks, and `uiop:run-program` argument/output-spec misuse.
 
 ## When to Use
 - Using the `event-emitter` library (`on`, `emit`, `remove-listener`, …)
 - About to add a `defmethod` whose specializers may match a method defined in a dependency
 - Writing or debugging a large Lisp file (>100 lines) and suspecting a paren error
 - Using `defmain` for a CLI with subcommands
+- Shelling out via `uiop:run-program` (building the command, reading output)
 
 ## `event-emitter` has INCONSISTENT argument order
 This is the most surprising trap — agents uniformly assume the order is consistent. It is not. Verified from `src/event-emitter.lisp`:
@@ -74,6 +75,45 @@ Negative depth at line N → extra `)` on that line. Non-zero final depth → mi
 - The generated dispatch function is the symbol `DEFMAIN:SUBCOMMAND` (in the `defmain` package), not a local symbol — call `(defmain:subcommand)`, never a bare `(subcommand)`.
 - Parent command arguments are passed as symbols from the **parent** package. Import them in the subcommand's package, or it sees unbound same-named symbols: `(:import-from #:myapp/cli/main #:main #:model #:output)`.
 
+## `uiop:run-program`: ONE command argument, and the stripped-string spec
+
+`run-program` takes a **single** command argument — a list of strings (exec'd
+directly) or a string (passed to the shell) — plus keyword options.
+
+**Never `apply` a spread argument list.** `(apply #'f (list a b c))` ≡ `(f a b c)`;
+the list becomes *positional arguments*, not one argument:
+
+```lisp
+;; BAD — spread apply: command becomes "git" (a STRING!) executed via the
+;; shell, while "-C" path "init" "-q" turn into junk keyword arguments.
+(apply #'uiop:run-program (list* "git" "-C" dir command))
+
+;; GOOD — one list argument, exec'd directly:
+(uiop:run-program (list* "git" "-C" dir command))
+```
+
+The bad form fails *silently and confusingly*: a bare `"git"` shell invocation
+exits 1 (usage), and the error surfaces as `SUBPROCESS-ERROR: exited with
+error code 1` far from the real cause. This exact trap cost a long debugging
+session — twice, because the first "fix" `(apply #'f (list* ...))` spreads
+the same way.
+
+**Output spec for a trimmed string.** The list form `(slug &rest key value …)`
+must have *keyword-value pairs*. To get stdout as a string without the
+trailing newline:
+
+```lisp
+(uiop:run-program '("git" "-C" dir "rev-parse" "HEAD")
+                  :output '(:string :stripped t))
+```
+
+Writing `(:string :stripped)` **without the `t`** passes a keyword with no
+value → `SIMPLE-PROGRAM-ERROR: odd number of &KEY arguments` from
+`slurp-input-stream`'s STRING method. Do not "fix" it by falling back to
+`:output :string` + manual `string-right-trim` — the spec above is the
+documented form (see the `run-program` docstring).
+
+
 ## Common Mistakes
 | Symptom | Fix |
 |---|---|
@@ -85,6 +125,8 @@ Negative depth at line N → extra `)` on that line. Non-zero final depth → mi
 | `(subcommand)` → `UNBOUND-VARIABLE` | Use `(defmain:subcommand)` |
 | Subcommand sees unbound parent-arg symbols | `(:import-from #:parent/pkg #:model #:output ...)` in the subcommand package |
 | Extra/missing `)` in a big file | Run `check-paren-balance` (see `check-paren-balance.lisp`) before `load-system` |
+| `SUBPROCESS-ERROR: exited with error code 1` from `uiop:run-program` on a command that works in the shell | Spread `apply` turned the command into a bare shell string; pass ONE list argument |
+| `SIMPLE-PROGRAM-ERROR: odd number of &KEY arguments` from a run-program `:output` spec | Use `'(:string :stripped t)` — the keyword needs its value `t` |
 
 ## Related skills
 For the surrounding style: **writing-common-lisp**. For reloading a file after edits: **using-common-lisp-repl**.
