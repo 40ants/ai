@@ -41,11 +41,62 @@
     ((characterp object) (json-string (string object)))
     (t (json-string (princ-to-string object)))))
 
+(defun next-form-start (source start)
+  ;; Let the Lisp reader skip real comments, including nested #| ... |#.
+  (with-input-from-string (stream source)
+    (file-position stream start)
+    (loop for char = (peek-char t stream nil nil) do
+      (cond
+        ((null char) (return nil))
+        ((char= char #\;)
+         (read-char stream)
+         (funcall (get-macro-character #\;) stream #\;))
+        ((char= char #\#)
+         (read-char stream)
+         (if (eql (peek-char nil stream nil nil) #\|)
+             (progn
+               (read-char stream)
+               (funcall (get-dispatch-macro-character #\# #\|) stream #\| nil))
+             (return (1- (file-position stream)))))
+        (t (return (file-position stream)))))))
+
+(defun signature-layout-valid-p (form start source)
+  (let ((*readtable* (copy-readtable nil)))
+    (with-input-from-string (stream source)
+      (file-position stream (1+ start))
+      ;; Read the operator, function name and complete argument-type list.
+      ;; Nested argument types cannot confuse the return-type boundary.
+      (dotimes (index 3) (read-preserving-whitespace stream))
+      (let* ((return-start (next-form-start source (file-position stream)))
+             (line-start (and return-start
+                              (1+ (or (position #\Newline source
+                                                :end return-start :from-end t)
+                                      -1)))))
+        (and (= (length form) 4) return-start
+             (string= (subseq source line-start return-start) "    "))))))
+
 (defun read-source (filename)
-  (let ((*read-eval* nil) (*package* (find-package :cl-user)) (forms nil))
-    (with-open-file (stream filename)
+  (let* ((*read-eval* nil) (*package* (find-package :cl-user))
+         (*readtable* (copy-readtable nil))
+         (source (uiop:read-file-string filename))
+         (forms nil) (list-starts nil) (signature-layouts nil)
+         (list-reader (get-macro-character #\()))
+    ;; Capture actual list locations, not signature-looking text in comments or
+    ;; strings. String streams keep offsets correct for non-ASCII source too.
+    (set-macro-character #\(
+      (lambda (stream char)
+        (let* ((start (1- (file-position stream)))
+               (form (funcall list-reader stream char)))
+          (push (cons form start) list-starts)
+          form)))
+    (with-input-from-string (stream source)
       (loop for form = (read stream nil :end) until (eq form :end) do
         (push form forms)
+        (when (and (consp form) (eq (car form) 'serapeum:->))
+          (push (if (signature-layout-valid-p
+                     form (cdr (assoc form list-starts :test #'eq)) source)
+                    1 0)
+                signature-layouts))
         (when (consp form)
           (cond
             ((member (car form) '(uiop:define-package cl:defpackage))
@@ -54,7 +105,7 @@
              (eval form))
             ((eq (car form) 'cl:in-package)
              (setf *package* (find-package (second form))))))))
-    (nreverse forms)))
+    (values (nreverse forms) (nreverse signature-layouts))))
 
 (defun functional-check (package-name test-name filename)
   (let ((*standard-output* (make-broadcast-stream)))
@@ -99,8 +150,8 @@
        (filename (first args))
        (package-name (second args))
        (test-name (third args))
-       (forms nil) (read-error nil) (runtime-error nil))
-  (handler-case (setf forms (read-source filename))
+       (forms nil) (signature-layouts nil) (read-error nil) (runtime-error nil))
+  (handler-case (multiple-value-setq (forms signature-layouts) (read-source filename))
     (error (condition) (setf read-error (princ-to-string condition))))
   (unless read-error
     (handler-case (functional-check package-name test-name filename)
@@ -108,6 +159,8 @@
   (write-string "EVAL_JSON:")
   (write-string "{\"forms\":")
   (emit-json (coerce forms 'vector))
+  (write-string ",\"signatureLayouts\":")
+  (emit-json (coerce signature-layouts 'vector))
   (write-string ",\"readError\":") (emit-json read-error)
   (write-string ",\"runtimeError\":") (emit-json runtime-error)
   (write-string "}")

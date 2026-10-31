@@ -64,6 +64,11 @@ function grade(output, context) {
           check('public-docstring', typeof definition?.[3] === 'string' && definition[3].trim().length > 0);
           const signatures = forms.filter(f => isForm(f, '->') && symbol(f[1]) === v.function);
           check(v.override ? 'override:no-signature' : 'type-signature', v.override ? signatures.length === 0 : signatures.length > 0);
+          if (!v.override) {
+            const layouts = evidence.signatureLayouts || [];
+            check('return-type-layout', !evidence.readError && layouts.length > 0
+              && layouts.every(valid => valid === 1));
+          }
           const nodes = []; walk(forms, n => nodes.push(n));
           check('no-runtime-eval-intern-unintern', !nodes.some(n => ['eval', 'intern', 'unintern'].includes(symbol(n))));
           const loops = nodes.filter(n => isForm(n, 'loop'));

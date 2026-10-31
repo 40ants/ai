@@ -212,7 +212,13 @@ Open `evals/writing-common-lisp/promptfooconfig.yaml`:
 - `copy_working_dir: copy` gives every call/repeat a fresh workspace, retained
   until assertions finish and then removed by Promptfoo.
 - `defaultTest.assert` archives files using `evals/lib/workspace-grade.cjs`,
-  then applies the unchanged domain rules in `evals/lib/grade.cjs`.
+  then applies the domain rules in `evals/lib/grade.cjs`.
+
+The `Contract` assertion includes `return-type-layout`: every Serapeum `->`
+signature in the tested source must put its return type on a separate line
+with exactly four leading spaces. SBCL identifies actual forms and source
+positions, so examples in comments or docstrings cannot satisfy the check.
+Cases with an explicit project override forbidding Serapeum skip this rule.
 
 `cases.json` supplies inputs and expectations. For example, `package-path`
 asks for `src/models/score.lisp` in system `demo`. The expected package is

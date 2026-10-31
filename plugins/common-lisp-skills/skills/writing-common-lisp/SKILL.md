@@ -23,7 +23,7 @@ Each file is its own package, named after its full filesystem path:
 (uiop:define-package #:myapp/src/models/foo
   (:use #:cl)
   (:import-from #:serapeum
-                #->
+                #:->
                 #:dict)
   (:export #:bar))
 (in-package #:myapp/src/models/foo)
@@ -45,11 +45,33 @@ Rules:
 `;;;;` file comment → `(in-package ...)` as the **first executable form** → optional file-specific `declaim` → definitions. One blank line between top-level forms.
 
 ## Types
+Every newly added function **must have a `serapeum:->` signature**, including
+non-exported helper functions. Place the signature immediately before its
+`defun`; for a generic function, place it before `defgeneric` so its methods
+share the declared contract. Describe all argument types and returned values.
+Put the return-value type on a separate line, indented by four spaces, even for
+short signatures.
+
 ```lisp
-(-> bar (number) (values number &optional))
-(defun bar (x) ...)
+(serapeum:-> bar (number)
+    (values number &optional))
+(defun bar (x)
+  "Return twice X."
+  (* 2 x))
 ```
-Use `serapeum:->` for signatures. Use `(declare (ignore var))` for unused parameters.
+
+Use the fully qualified `serapeum:->`, or `->` with an explicit
+`(:import-from #:serapeum #:->)` in the package definition. A raw
+`(declaim (ftype ...))`, parameter `(declare (type ...))` forms, inferred types,
+and type descriptions in docstrings do **not** satisfy this convention.
+
+"Do not install dependencies" still permits using Serapeum already available
+in the project. Preserve explicit project overrides from `AGENTS.md` or
+`ai/cl-style.md` as described above.
+
+Before finishing, inspect every function you added and verify that its matching
+`serapeum:->` signature is present in the written source. Use
+`(declare (ignore var))` for unused parameters.
 
 ## Control flow and iteration
 - `loop` **without** keyword style — write `(loop for x in list while (...) do ...)`; do **not** use `:for`, `:do`, `:while`.
@@ -76,6 +98,7 @@ For exported variables and public extension points, the docstring should state t
 | Package name misses a path segment (e.g. `myapp/models/foo` for file `src/models/foo.lisp`) | Include every segment: `myapp/src/models/foo` |
 | `(:use #:serapeum)` or `(:use #:some-lib)` | Replace with `:local-nicknames` or `:import-from` of only the symbols used |
 | Keyword-style `loop` (`:for`, `:do`, `:while`) | Drop the keywords: `(loop for x ... while ... do ...)` |
+| New function has no `serapeum:->`, or only a raw `declaim`/parameter type declaration | Add its `serapeum:->` signature immediately before the definition, including for internal helpers |
 | `(error "boom")` bare string | `(error "boom: ~A" val)` with format args |
 | Exported variable lacks a docstring or behavior contract | Add a docstring describing semantics, especially for hooks/configuration variables |
 

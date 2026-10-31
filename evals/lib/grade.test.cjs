@@ -2,6 +2,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const grade = require('./grade.cjs');
 
+const signature = `(-> add-score (integer integer)
+    (values integer &optional))`;
 const source = `;;;; Scores.
 (uiop:define-package #:demo/src/models/score
   (:use #:cl)
@@ -9,7 +11,7 @@ const source = `;;;; Scores.
   (:export #:add-score))
 (in-package #:demo/src/models/score)
 
-(-> add-score (integer integer) (values integer &optional))
+${signature}
 (defun add-score (a b)
   "Return the sum of the two integer scores."
   (+ a b))
@@ -38,7 +40,7 @@ test('DEFPACKAGE fails the normal package convention', () => {
   assert.equal(evaluate(source.replace('uiop:define-package', 'defpackage')).pass, false);
 });
 test('an absent signature fails even when the source mentions it in a comment', () => {
-  const code = source.replace('(-> add-score (integer integer) (values integer &optional))', '; -> add-score');
+  const code = source.replace(signature, '; -> add-score');
   assert.equal(evaluate(code).pass, false);
 });
 test('a missing export fails', () => {
@@ -58,7 +60,7 @@ test('extra scaffolding is rejected only when the task explicitly forbids it', (
 });
 test('a project override accepts DEFPACKAGE and no Serapeum signature', () => {
   const code = source.replace('uiop:define-package', 'defpackage')
-    .replace('(-> add-score (integer integer) (values integer &optional))', '');
+    .replace(signature, '');
   const result = grade(JSON.stringify({ variant: 'with-skill', skillRead: true, files: { [vars.file]: code } }),
     { vars: { ...vars, override: true } });
   assert.equal(result.pass, true, result.reason);
@@ -79,4 +81,56 @@ test('negative routing: selecting the Lisp skill for Python fails', () => {
 test('empty/malformed provider evidence never passes', () => {
   assert.equal(grade('not json', { vars }).pass, false);
   assert.equal(grade('{}', { vars }).pass, false);
+});
+
+test('return type on the signature header line fails the layout assertion', () => {
+  const result = evaluate(source.replace(signature, signature.replace('\n    ', ' ')));
+  assert.equal(result.pass, false);
+  assert.equal(result.reason, 'return-type-layout');
+});
+test('return type needs exactly four spaces, not tabs or other indentation', () => {
+  for (const indent of ['', '  ', '   ', '     ', '        ', '\t']) {
+    const result = evaluate(source.replace('\n    (values', '\n' + indent + '(values'));
+    assert.equal(result.pass, false, JSON.stringify(indent));
+    assert.match(result.reason, /return-type-layout/, JSON.stringify(indent));
+  }
+});
+test('qualified Serapeum signatures and scalar return types pass', () => {
+  const code = source.replace('(-> add-score', '(serapeum:-> add-score');
+  assert.equal(evaluate(code).pass, true);
+  assert.equal(evaluate(code.replace('(values integer &optional)', 'integer')).pass, true);
+});
+test('macro identity is preserved through a package re-export', () => {
+  const alias = '(cl:defpackage #:signature-alias (:use) (:import-from #:serapeum #:->) (:export #:->))\n';
+  const code = alias + source.replace('(-> add-score', '(signature-alias:-> add-score');
+  const result = evaluate(code);
+  assert.equal(result.pass, true, result.reason);
+});
+test('correct examples in comments or docstrings cannot hide an inline signature', () => {
+  const inline = source.replace(signature, signature.replace('\n    ', ' '));
+  for (const code of [
+    '; Example:\n' + signature.split('\n').map(line => '; ' + line).join('\n') + '\n' + inline,
+    '#| Example #| nested comment |#\n' + signature + '\n|#\n' + inline,
+    inline.replace('Return the sum of the two integer scores.', signature)
+  ]) {
+    assert.equal(evaluate(code).reason, 'return-type-layout');
+  }
+});
+test('nested and multiline argument types keep the correct return-type boundary', () => {
+  const code = source.replace('(integer integer)', '((integer * *)\n                 integer)');
+  assert.equal(evaluate(code).pass, true);
+});
+test('reader comments between argument and return types are skipped', () => {
+  const code = source.replace('\n    (values', ' ; argument types\n  #| nested #| comment |# |#\n    (values');
+  assert.equal(evaluate(code).pass, true);
+  assert.equal(evaluate(code.replace('\n    (values', '\n  (values')).reason, 'return-type-layout');
+});
+test('layout applies to helper signatures too, including zero-argument functions', () => {
+  const helper = '\n(serapeum:-> default-score ()\n    (values integer &optional))\n(defun default-score () 0)\n';
+  assert.equal(evaluate(source + helper).pass, true);
+  assert.equal(evaluate(source + helper.replace('\n    (values', ' (values')).reason, 'return-type-layout');
+});
+test('Unicode text before a signature does not shift its source positions', () => {
+  const code = source.replace(';;;; Scores.', ';;;; Суммы 🧮.');
+  assert.equal(evaluate(code).pass, true);
 });
