@@ -1,0 +1,6 @@
+# Rebuild with nix-shell / apm install --frozen. Keep manifests in Git.
+.evals/
+apm_modules/
+.agents/skills/promptfoo-*/
+.apm/
+

@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: writing-common-lisp observable behavior v1
+
+prompts:
+  - '{{task}}'
+
+providers:
+  - id: file://../lib/codex-provider.cjs
+    label: with-skill
+    config:
+      variant: with-skill
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://../lib/grade.cjs
+      metric: Contract
+
+evaluateOptions:
+  maxConcurrency: 1
+
+tests: file://cases.json
