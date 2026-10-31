@@ -1,0 +1,11 @@
+{
+  "name": "common-lisp-skill-eval-tools",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=22.22.0" },
+  "dependencies": {
+    "promptfoo": "0.125.1",
+    "@openai/codex-sdk": "0.156.1",
+    "@openai/codex": "0.156.1"
+  }
+}

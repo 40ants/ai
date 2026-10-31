@@ -4,30 +4,24 @@ let
     sha256 = "0zr2ig7bf6y7lngd06smfgpx0033yza3l9rp0i718pb0gmks5z3v";
   }) {};
 
-  # Node 24.19+ can abort in the older better-sqlite3 bundled by this
-  # Promptfoo release. Compile native addons against the pinned Node 22 LTS.
-  promptfoo = pkgs.promptfoo.override {
-    buildNpmPackage = args: pkgs.buildNpmPackage (finalAttrs:
-      (if builtins.isFunction args then args finalAttrs else args)
-      // { nodejs = pkgs.nodejs_22; });
-  };
-
-  # The upstream binaries preserve the versions used by these evals. Nothing is
-  # installed into Homebrew, ~/.local/bin or a user Nix profile.
-  codex = pkgs.stdenvNoCC.mkDerivation {
-    pname = "codex-cli";
-    version = "0.165.0";
-    src = pkgs.fetchurl {
-      url = "https://registry.npmjs.org/@openai/codex/-/codex-0.165.0-darwin-arm64.tgz";
-      sha256 = "15qgba59146jd3n86i048xwbis5gfkfma6r2s3j2lvbbrfmv14d9";
-    };
-    sourceRoot = "package";
+  # Published, already-built packages. The lockfile pins every transitive
+  # dependency; npmDepsHash verifies downloads. SDK and CLI must match the
+  # compatibility range enforced by Promptfoo's native Codex provider.
+  toolchain = pkgs.buildNpmPackage {
+    pname = "skill-eval-toolchain";
+    version = "0.125.1";
+    src = ./nix/promptfoo;
+    nodejs = pkgs.nodejs_22;
+    npmDepsHash = "sha256-lMDKBNYTDx7nmH1Nar+EOCfv1O5ZWp5ze1hS/XsXAJk=";
+    dontNpmBuild = true;
     installPhase = ''
-      mkdir -p "$out/bin" "$out/libexec"
-      cp -R vendor "$out/libexec/"
-      ln -s "$out/libexec/vendor/aarch64-apple-darwin/bin/codex" "$out/bin/codex"
+      runHook preInstall
+      mkdir -p "$out/bin" "$out/lib/skill-eval-toolchain"
+      cp -R node_modules "$out/lib/skill-eval-toolchain/"
+      ln -s "$out/lib/skill-eval-toolchain/node_modules/.bin/promptfoo" "$out/bin/promptfoo"
+      ln -s "$out/lib/skill-eval-toolchain/node_modules/.bin/codex" "$out/bin/codex"
+      runHook postInstall
     '';
-    dontFixup = true;
   };
 
   apm = pkgs.stdenvNoCC.mkDerivation {
@@ -53,13 +47,14 @@ let
     esac
     exec ${lispRuntime}/bin/sbcl --no-userinit --no-sysinit "$@"
   '';
-  evalTools = [ promptfoo pkgs.nodejs_22 sbcl pkgs.git pkgs.ripgrep apm codex
+  evalTools = [ toolchain pkgs.nodejs_22 sbcl pkgs.git pkgs.ripgrep apm
     pkgs.bashInteractive pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.gnused
     pkgs.gnutar pkgs.which ];
 in
 assert pkgs.stdenv.hostPlatform.system == "aarch64-darwin";
 pkgs.mkShell {
   packages = evalTools;
+  SKILL_EVAL_TOOLCHAIN_DIR = "${toolchain}/lib/skill-eval-toolchain/node_modules";
   SKILL_EVAL_TOOL_PATH = "${pkgs.lib.makeBinPath evalTools}:/usr/bin:/bin:/usr/sbin:/sbin";
   PROMPTFOO_DISABLE_TELEMETRY = "1";
   PROMPTFOO_DISABLE_UPDATE = "1";
@@ -68,6 +63,6 @@ pkgs.mkShell {
     export PATH="$SKILL_EVAL_TOOL_PATH"
     export PROMPTFOO_CONFIG_DIR="$PWD/.evals/promptfoo"
     export APM_CACHE_DIR="$PWD/.evals/apm-cache"
-    echo "Eval tools: promptfoo 0.118.14, Codex 0.165.0, APM 0.31.0 (pinned Nix store)"
+    echo "Eval tools: promptfoo 0.125.1, Codex SDK/CLI 0.156.1, APM 0.31.0 (pinned Nix store)"
   '';
 }

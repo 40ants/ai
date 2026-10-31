@@ -156,8 +156,9 @@ Note: this validator requires `PyYAML` in the active Python environment.
 ## Test Skills with Promptfoo
 
 The first behavioral suite is for `writing-common-lisp`. The skill itself is
-unchanged. The suite asks Codex to edit disposable projects, captures its JSONL
-trace and output files, then reads and runs the Lisp with SBCL and Serapeum.
+unchanged. The suite asks Codex to edit disposable projects through Promptfoo's
+native Codex SDK provider, captures its turn and output files, then reads and
+runs the Lisp with SBCL and Serapeum.
 
 ### 1. Enter the pinned environment
 
@@ -166,12 +167,14 @@ cd /Users/art/projects/lisp/ai
 nix-shell
 ```
 
-`shell.nix` pins nixpkgs by commit and SHA-256, Promptfoo **0.118.14**, Codex
-**0.165.0**, APM **0.31.0**, Node.js **22.23.4**, and SBCL **2.6.8** with
-Serapeum. Promptfoo is the version packaged by that nixpkgs snapshot; its eval
-API is sufficient for this suite. Its native dependencies are rebuilt against
-Node 22 LTS to avoid a Node 24/SQLite lifecycle crash. The shell targets Apple Silicon
-macOS. Nix downloads dependencies to its store without installing global npm
+`shell.nix` pins nixpkgs by commit and SHA-256, Promptfoo **0.125.1**, Codex
+SDK and CLI **0.156.1**, APM **0.31.0**, Node.js **22.23.4**, and SBCL **2.6.8**
+with Serapeum. `nix/promptfoo/package-lock.json` pins the published npm packages
+and their complete dependency graph; Nix also checks the downloaded dependency
+hash. The native provider requires SDK `^0.156.1`, so its matching CLI replaces
+the previous 0.165.0 CLI only inside this shell. The new Promptfoo uses libSQL;
+the old better-sqlite3 rebuild workaround is removed. The shell targets Apple
+Silicon macOS. Nix downloads dependencies to its store without installing global npm
 packages or changing a Homebrew installation/user Nix profile.
 
 The shell uses a PATH made from those Nix packages plus macOS system utilities.
@@ -205,8 +208,11 @@ to discover the installed skills.
 Open `evals/writing-common-lisp/promptfooconfig.yaml`:
 
 - `prompts` selects the user request (`{{task}}`).
-- `providers` invokes the real Codex CLI through `evals/lib/codex-provider.cjs`.
-- `defaultTest.assert` grades files and behavior through `evals/lib/grade.cjs`.
+- `providers` uses Promptfoo's built-in `openai:codex-sdk` provider.
+- `copy_working_dir: copy` gives every call/repeat a fresh workspace, retained
+  until assertions finish and then removed by Promptfoo.
+- `defaultTest.assert` archives files using `evals/lib/workspace-grade.cjs`,
+  then applies the unchanged domain rules in `evals/lib/grade.cjs`.
 
 `cases.json` supplies inputs and expectations. For example, `package-path`
 asks for `src/models/score.lisp` in system `demo`. The expected package is
@@ -218,9 +224,10 @@ package paths, public exports/docstrings, signatures, LOOP style, exhaustive
 dispatch, error reporting, unused parameters, hook contracts, project overrides,
 protected `.qlot/` dependencies, and a negative Python routing case.
 
-The runner creates a fresh Git root for every sample and mounts only a snapshot
-of the tested skill. It ignores personal Codex configuration and disables user
-and admin skills for this process. It reuses existing Codex file-based login
+The runner prepares fixture templates with a Git root and a snapshot of the
+tested skill. Promptfoo creates a fresh copy for each sample. The runner uses
+a temporary Codex home with no personal configuration, and disables user and
+admin skills for this process. It reuses existing Codex file-based login
 state; no API key or paid model grader is needed. Each run still consumes the
 model allowance of that login. If file-based authentication is unavailable,
 authenticate the pinned Codex CLI with `codex login` first.
@@ -228,7 +235,7 @@ authenticate the pinned Codex CLI with `codex login` first.
 ### 3. Calibrate the grader before trusting it
 
 ```bash
-node --test evals/lib/grade.test.cjs
+node --test evals/lib/*.test.cjs
 promptfoo validate config -c evals/writing-common-lisp/promptfooconfig.yaml
 ```
 
@@ -248,10 +255,10 @@ expected sample to be present and passing, with no infrastructure errors. A
 failed requirement is a useful result: inspect the artifact before changing
 either the skill or its test. Do not weaken an assertion just to turn it green.
 
-Routing evidence is a heuristic: the provider looks for successful direct
-`SKILL.md` reads in command events, rather than believing "I used the skill" in
-the final response. It does not provide a complete first-class invocation log.
-For a suspicious routing failure, inspect `trace.jsonl`.
+Routing evidence comes from Promptfoo's native `metadata.skillCalls`. It is
+still a heuristic based on direct `SKILL.md` reads, not a first-class SDK skill
+invocation event. Our previous command-matching heuristic and custom provider
+have been removed. For a suspicious routing failure, inspect `turn.json`.
 
 ### 5. Read the accumulated history
 
@@ -270,16 +277,24 @@ Every run also gets a unique directory under `.evals/runs/` containing:
 manifest.json          Git revision/status, tool versions, model/effort,
                        case list, repeat count, skill hash and suite hash
 skill/                 Exact skill directory used by that run
-harness/               Snapshot of eval code, tests and shell.nix
+harness/               Snapshot of eval code, tests, shell.nix and npm lockfile
 results.json           Full Promptfoo export
 summary.json           Per-case results, failures/errors, efficiency statistics
-samples/<sample-id>/   Actual prompt, trace.jsonl, stderr.log, generated files
+fixtures/              Immutable starting project templates for native copies
+samples/<sample-id>/   Actual prompt, turn.json, sample.json, generated files
 ```
 
 Both passing and failing runs remain in history. Authentication files stay in
 temporary runtime directories and are not copied into these artifacts. The
-temporary project/auth directory is removed after each sample; generated files
-and traces remain in the run directory.
+working copy is removed by Promptfoo after each sample; the authentication
+directory is removed after the run. Generated files and turns remain archived.
+Old runs keep their original JSONL artifacts and remain readable in history.
+
+Before the 0.125.1 migration, a consistent SQLite backup was saved under
+`.evals/backups/before-promptfoo-0.125.1-*/promptfoo.db`. Existing database rows
+and run folders are preserved. Re-enter `nix-shell` after pulling this upgrade;
+an already-open shell still has the previous tools on its PATH. Establish a
+new baseline with the upgraded harness before assessing further skill edits.
 
 `.evals/` is ignored by Git. Back up **the whole directory**, including the
 Promptfoo database, if you need history to survive deletion of this checkout or
@@ -342,6 +357,8 @@ statistical significance from a single sample.
 The report retains passes, assertion failures, infrastructure errors, median
 tokens, command count and elapsed time separately. ChatGPT-login usage has no
 reliable per-call USD price here; `costUsd: null` means unknown, not zero.
+The native provider may display an estimated API cost in Promptfoo's UI. That
+estimate is not a charge or a measurement of ChatGPT subscription billing.
 
 ### 8. Add a regression case before editing instructions
 
@@ -360,6 +377,6 @@ the file-layout paragraph calls `in-package` the first executable form. Resolve
 that intended contract before making it a hard assertion. The suite also does
 not prove every formatting/naming rule or behavior of related skills.
 
-References: [Promptfoo custom providers](https://www.promptfoo.dev/docs/providers/custom-api/),
+References: [Promptfoo native Codex SDK provider](https://www.promptfoo.dev/docs/providers/openai-codex-sdk/),
 [Promptfoo skill evaluations](https://developers.openai.com/blog/eval-skills),
 [APM install and frozen dependencies](https://microsoft.github.io/apm/reference/cli/install/).

@@ -4,6 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -71,17 +72,18 @@ function summarize(runDir, manifest, processStatus, processSignal = null) {
   const body = exported?.results;
   const raw = Array.isArray(body) ? body : body?.results || [];
   const rows = raw.map(r => {
-    let sample;
-    try { sample = typeof r.response?.output === 'string' ? JSON.parse(r.response.output) : r.response?.output; } catch {}
+    let sample = r.response?.metadata?.skillEval;
+    // Old exports used an envelope as output; retain historical compatibility.
+    if (!sample) try { sample = typeof r.response?.output === 'string' ? JSON.parse(r.response.output) : r.response?.output; } catch {}
     return {
       case: r.testCase?.vars?.id || r.vars?.id,
       variant: sample?.variant || r.provider?.label || r.provider?.id,
       pass: r.success === true, score: r.score,
       error: r.failureReason === 2 || r.response?.error ? (r.error || r.response?.error || 'Provider/grader error') : null,
       reason: r.gradingResult?.reason || null,
-      tokens: sample ? (sample.usage.input_tokens || 0) + (sample.usage.output_tokens || 0) : null,
+      tokens: sample?.usage ? (sample.usage.input_tokens || 0) + (sample.usage.output_tokens || 0) : r.response?.tokenUsage?.total ?? null,
       cachedInputTokens: sample?.usage.cached_input_tokens || 0,
-      durationMs: sample?.durationMs, commands: sample?.commandCount,
+      durationMs: sample?.durationMs ?? r.latencyMs, commands: sample?.commandCount,
       skillRead: sample?.skillRead, trace: sample?.trace
     };
   });
@@ -132,9 +134,12 @@ if (command === 'run') {
     .filter(c => (group === 'all' || c.vars.group === group) && (!flags.filter || new RegExp(flags.filter).test(c.description)));
   if (!cases.length) throw new Error('No matching cases; refusing an empty eval');
   const tools = Object.fromEntries(['promptfoo', 'codex', 'apm', 'sbcl', 'node'].map(tool => [tool, exec(tool, ['--version'])]));
-  if (tools.promptfoo !== '0.118.14' || !tools.codex.includes('0.165.0') || !tools.apm.includes('0.31.0')) {
+  if (tools.promptfoo !== '0.125.1' || !tools.codex.includes('0.156.1') || !tools.apm.includes('0.31.0') || !process.env.SKILL_EVAL_TOOLCHAIN_DIR) {
     throw new Error('Unexpected tool versions. Enter the project nix-shell first.');
   }
+  const require = createRequire(import.meta.url);
+  tools.codexSdk = require(path.join(process.env.SKILL_EVAL_TOOLCHAIN_DIR, '@openai/codex-sdk/package.json')).version;
+  if (tools.codexSdk !== '0.156.1') throw new Error('Unexpected Codex SDK version');
   const id = `${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomUUID().slice(0, 6)}`;
   const runDir = path.join(runsRoot, id);
   fs.mkdirSync(runDir, { recursive: true });
@@ -151,14 +156,66 @@ if (command === 'run') {
   } else fs.cpSync(path.resolve(root, flags['skill-dir'] || skillRelative), skillSnapshot, { recursive: true });
   fs.cpSync(path.join(root, 'evals'), path.join(runDir, 'harness/evals'), { recursive: true });
   fs.copyFileSync(path.join(root, 'shell.nix'), path.join(runDir, 'harness/shell.nix'));
+  fs.cpSync(path.join(root, 'nix'), path.join(runDir, 'harness/nix'), { recursive: true });
   const suiteHash = digest(path.join(runDir, 'harness'));
   const suiteDir = path.join(runDir, 'harness', suiteRelative);
-  write(path.join(suiteDir, 'selected-cases.json'), cases);
-  let config = fs.readFileSync(path.join(suiteDir, 'promptfooconfig.yaml'), 'utf8')
-    .replace('tests: file://cases.json', 'tests: file://selected-cases.json');
   const variants = flags.ablation ? ['with-skill', 'without-skill'] : ['with-skill'];
-  if (flags.ablation) config = config.replace('\ndefaultTest:', '\n  - id: file://../lib/codex-provider.cjs\n    label: without-skill\n    config:\n      variant: without-skill\n\ndefaultTest:');
-  const configFile = path.join(suiteDir, 'effective.yaml');
+  // Templates are immutable inputs; Promptfoo copies them for every call/repeat
+  // and removes each working copy only after assertions have archived its files.
+  for (const test of cases) {
+    test.vars.taskWithoutSkill = test.vars.task.replace(/Use \$writing-common-lisp(?: and follow this project's conventions)?\.\s*/g, '');
+    for (const variant of variants) {
+      const workspace = path.join(runDir, 'fixtures', test.vars.id, variant);
+      fs.mkdirSync(workspace, { recursive: true });
+      exec('git', ['init', '--quiet', workspace]);
+      for (const [relative, content] of Object.entries(test.vars.fixtures || {})) {
+        if (path.isAbsolute(relative) || relative.split('/').includes('..')) throw new Error('Invalid fixture path');
+        write(path.join(workspace, relative), content);
+      }
+      if (variant === 'with-skill') fs.cpSync(skillSnapshot, path.join(workspace, '.agents/skills/writing-common-lisp'), { recursive: true });
+      test.vars[variant === 'with-skill' ? 'workspaceWithSkill' : 'workspaceWithoutSkill'] = workspace;
+    }
+  }
+  write(path.join(suiteDir, 'selected-cases.json'), cases);
+  const yaml = require(path.join(process.env.SKILL_EVAL_TOOLCHAIN_DIR, 'js-yaml'));
+  const config = yaml.load(fs.readFileSync(path.join(suiteDir, 'promptfooconfig.yaml'), 'utf8'));
+  config.tests = 'file://selected-cases.json';
+  const disabledSkills = [];
+  const seen = new Set();
+  function disableSkills(dir) {
+    if (!fs.existsSync(dir)) return;
+    const real = fs.realpathSync(dir);
+    if (seen.has(real)) return;
+    seen.add(real);
+    for (const name of fs.readdirSync(dir)) {
+      const file = path.join(dir, name);
+      if (fs.statSync(file).isDirectory()) disableSkills(file);
+      else if (name.toLowerCase() === 'skill.md') disabledSkills.push({ path: file, enabled: false });
+    }
+  }
+  disableSkills(path.join(os.homedir(), '.agents/skills'));
+  disableSkills('/etc/codex/skills');
+  const scratch = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'cl-eval-auth-'));
+  fs.chmodSync(scratch, 0o700);
+  // Only reuse login state. Never persist credentials in a run snapshot.
+  const auth = path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'auth.json');
+  if (fs.existsSync(auth)) fs.symlinkSync(auth, path.join(scratch, 'auth.json'));
+  const provider = config.providers[0];
+  Object.assign(provider.config, {
+    model, model_reasoning_effort: effort,
+    cli_env: { PATH: process.env.SKILL_EVAL_TOOL_PATH, CODEX_HOME: scratch, ZDOTDIR: scratch, XDG_CACHE_HOME: path.join(scratch, 'cache') },
+    cli_config: {
+      'features.memories': false, allow_login_shell: false, 'skills.config': disabledSkills,
+      'shell_environment_policy.set.PATH': process.env.SKILL_EVAL_TOOL_PATH,
+      'shell_environment_policy.set.ZDOTDIR': scratch,
+      'shell_environment_policy.set.XDG_CACHE_HOME': path.join(scratch, 'cache')
+    }
+  });
+  if (flags.ablation) {
+    config.prompts.push({ id: 'without-skill', label: 'without-skill-task', raw: '{{taskWithoutSkill}}' });
+    config.providers.push({ ...provider, label: 'without-skill', prompts: ['without-skill'], config: { ...provider.config, working_dir: '{{workspaceWithoutSkill}}' } });
+  }
+  const configFile = path.join(suiteDir, 'effective.json');
   write(configFile, config);
   const manifest = {
     id, label: flags.label || 'unlabelled', started: new Date().toISOString(),
@@ -176,10 +233,12 @@ if (command === 'run') {
     SKILL_EVAL_RUN_DIR: runDir, SKILL_EVAL_MODEL: model, SKILL_EVAL_EFFORT: effort,
     SKILL_EVAL_TIMEOUT_MS: String(manifest.timeoutMs)
   };
+  env.PROMPTFOO_EVAL_TIMEOUT_MS = String(manifest.timeoutMs);
   console.log(`Running ${cases.length} cases × ${repeat} repeats × ${variants.length} variants; model=${model}/${effort}`);
   console.log(`Run: ${id}`);
   const args = ['eval', '-c', configFile, '-o', path.join(runDir, 'results.json'), '--no-cache', '--no-share', '--no-table', '--repeat', String(repeat), '--max-concurrency', '1'];
-  const child = await new Promise(resolve => {
+  let child;
+  try { child = await new Promise(resolve => {
     const processChild = spawn('promptfoo', args, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
     processChild.stdout.on('data', chunk => {
       process.stdout.write(chunk);
@@ -194,7 +253,7 @@ if (command === 'run') {
       resolve({ status: 1, signal: null });
     });
     processChild.on('close', (status, signal) => resolve({ status, signal }));
-  });
+  }); } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
   const summary = summarize(runDir, manifest, child.status, child.signal);
   printSummary(summary);
   process.exitCode = summary.coverageComplete && summary.rows.every(r => r.pass) && child.status === 0 ? 0 : 1;
