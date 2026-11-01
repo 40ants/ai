@@ -1,11 +1,12 @@
 ;;;; Agent identity and task rendering, independent of skill variants.
-(uiop:define-package #:40ants-ai-evals/src/agents
+(uiop:define-package #:40ants-ai-evals/agents
   (:use #:cl)
+  (:import-from #:cl-ppcre)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util #:field #:decode #:encode)
+  (:import-from #:40ants-ai-evals/util #:field #:decode #:encode)
   (:export #:*profiles* #:selected-agents #:profile-for #:provider-label #:provider-identity
            #:render-task))
-(in-package #:40ants-ai-evals/src/agents)
+(in-package #:40ants-ai-evals/agents)
 
 (defparameter *profiles*
   (dict "codex" (dict "agent" "codex" "model" "gpt-6-sol" "effort" "medium")
@@ -17,7 +18,7 @@ EFFORT is a Codex setting and is never translated into an OpenCode reasoning opt
 (-> selected-agents (hash-table)
     list)
 (defun selected-agents (flags)
-  "Resolve --agent; preserve Codex as the default for existing commands."
+  "Resolve `--agent`; preserve Codex as the default for existing commands."
   (let ((agent (or (field flags "agent") "codex")))
     (cond ((equal agent "all") (list "codex" "opencode"))
           ((member agent '("codex" "opencode") :test #'equal) (list agent))

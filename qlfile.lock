@@ -2,3 +2,7 @@
  (:class qlot/source/dist:source-dist
   :initargs (:distribution "https://beta.quicklisp.org/dist/quicklisp.txt" :%version "2026-01-01")
   :version "2026-01-01"))
+("40ants-doc-theme-40ants" .
+ (:class qlot/source/github:source-github
+  :initargs (:repos "40ants/40ants-doc-theme-40ants" :ref "5172e5447da6ddf473861f123bb62f6627412bc1" :branch nil :tag nil)
+  :version "github-5172e5447da6ddf473861f123bb62f6627412bc1"))

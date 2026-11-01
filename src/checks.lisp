@@ -1,14 +1,16 @@
 ;;;; Extension API: named checks, profiles, typed parameters and shared evidence.
-(uiop:define-package #:40ants-ai-evals/src/checks
+(uiop:define-package #:40ants-ai-evals/checks
   (:use #:cl)
+  (:import-from #:asdf)
+  (:import-from #:yason)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:true-p #:bool #:root #:at #:safe-relative-p #:sequence-list
                 #:json-equal-p)
   (:export #:register-check #:register-profile #:load-check-systems #:validate-plan
            #:execute-plan #:make-context #:context-sample #:context-vars #:cached
            #:outcome #:merge-vars #:describe-checks))
-(in-package #:40ants-ai-evals/src/checks)
+(in-package #:40ants-ai-evals/checks)
 
 (defvar *checks* (dict))
 (defvar *profiles* (dict))

@@ -1,15 +1,15 @@
 ;;;; Agent configuration and transport tests do not call a model.
-(uiop:define-package #:40ants-ai-evals/tests/agents-test
+(uiop:define-package #:40ants-ai-evals-tests/agents-test
   (:use #:cl)
   (:import-from #:serapeum #:-> #:dict)
   (:import-from #:rove #:deftest #:ok #:signals)
-  (:import-from #:40ants-ai-evals/src/agents
+  (:import-from #:40ants-ai-evals/agents
                 #:selected-agents #:profile-for #:provider-identity #:render-task)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:at #:root #:read-json #:write-text #:write-json #:encode #:decode
                 #:temporary-directory #:remove-directory #:run-command)
-  (:import-from #:40ants-ai-evals/src/runner #:validate-options))
-(in-package #:40ants-ai-evals/tests/agents-test)
+  (:import-from #:40ants-ai-evals/runner #:validate-options))
+(in-package #:40ants-ai-evals-tests/agents-test)
 
 (deftest profiles-and-options
   (ok (equal '("codex") (selected-agents (dict))))
@@ -47,7 +47,7 @@
     (unwind-protect
          (progn
            (write-text (at scratch "skill/SKILL.md") "Skill instructions")
-           (40ants-ai-evals/src/runner::prepare-fixtures
+           (40ants-ai-evals/runner::prepare-fixtures
             scratch cases '("with-skill" "without-skill") '("codex" "opencode"))
            (ok (equal "Create code." (field vars "taskWithoutSkill")))
            (ok (equal "Use writing-common-lisp skill. Create code." (field vars "task_opencode")))
@@ -65,7 +65,7 @@
            (let* ((profiles (dict "codex" (profile-for "codex" (dict))
                                   "opencode" (profile-for "opencode" (dict))))
                   (config (read-json
-                           (40ants-ai-evals/src/runner::effective-config
+                           (40ants-ai-evals/runner::effective-config
                             scratch cases (dict "agent" "all" "ablation" t) scratch profiles
                             (dict "baseUrl" "http://127.0.0.1:1234")))))
              (ok (= 4 (length (field config "providers"))))

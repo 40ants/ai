@@ -1,13 +1,13 @@
 ;;;; Read old and new exports without modifying Promptfoo's database.
-(uiop:define-package #:40ants-ai-evals/src/history
+(uiop:define-package #:40ants-ai-evals/history
   (:use #:cl)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:true-p #:bool #:decode #:read-json #:write-json
                 #:sequence-list #:json-equal-p #:root #:at)
   (:export #:histories #:find-run #:make-summary #:summarize #:print-summary
            #:compare-runs #:print-history))
-(in-package #:40ants-ai-evals/src/history)
+(in-package #:40ants-ai-evals/history)
 
 (-> present (t)
     t)
@@ -356,7 +356,7 @@ ALLOW-MISMATCH prints suite or same-agent profile differences instead of rejecti
     (loop for run in (list before after)
           for selected in (list before-agent after-agent) do
       (format t "~A [~A]: ~A~%" (field run "label") selected
-              (40ants-ai-evals/src/util:encode
+              (40ants-ai-evals/util:encode
                (or (field run "agentVariants" selected) (field run "variants")))))
     (let ((seen (make-hash-table :test 'equal)))
       (dolist (row (append (remove-if-not (lambda (row)

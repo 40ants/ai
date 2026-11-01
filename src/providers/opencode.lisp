@@ -1,14 +1,16 @@
 ;;;; Isolated OpenCode 2.2.1 HTTP provider; no SDK or shell transport.
-(uiop:define-package #:40ants-ai-evals/src/providers/opencode
+(uiop:define-package #:40ants-ai-evals/providers/opencode
   (:use #:cl)
+  (:import-from #:cl-ppcre)
+  (:import-from #:dexador)
   (:import-from #:serapeum #:dict #:->)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:at #:encode #:decode #:read-json #:write-json #:write-text
                 #:temporary-directory #:remove-directory #:unique-id #:now
                 #:sequence-list #:true-p #:bool #:copy-directory)
   (:export #:start-server #:stop-server #:call-agent #:normalize-transcript
            #:model-reference #:*http-request*))
-(in-package #:40ants-ai-evals/src/providers/opencode)
+(in-package #:40ants-ai-evals/providers/opencode)
 
 (defvar *servers* (make-hash-table :test 'equal))
 (defvar *http-request* nil
@@ -123,7 +125,7 @@ The serializable descriptor references private temporary state; STOP-SERVER eras
 (-> stop-server (hash-table)
     t)
 (defun stop-server (server)
-  "Stop the owned server and remove its private configuration, SQL data and credentials."
+  "Stop the owned server and remove its private configuration, database and credentials."
   (let* ((id (field server "id")) (process (gethash id *servers*)))
     (when process
       (when (uiop:process-alive-p process)

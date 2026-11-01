@@ -1,17 +1,26 @@
 ;;;; Snapshot inputs, prepare fixtures and delegate execution to Promptfoo.
-(uiop:define-package #:40ants-ai-evals/src/runner
+(uiop:define-package #:40ants-ai-evals/runner
   (:use #:cl)
+  (:import-from #:asdf)
+  (:import-from #:babel)
+  (:import-from #:cl-ppcre)
+  (:import-from #:ironclad)
+  (:import-from #:yason)
+  (:import-from #:40ants-ai-evals/checks)
+  (:import-from #:40ants-ai-evals/collector)
+  (:import-from #:40ants-ai-evals/grading/contracts)
+  (:import-from #:40ants-ai-evals/providers/opencode)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:true-p #:read-json #:write-json #:write-text #:encode
                 #:root #:at #:temporary-directory #:remove-directory #:run-command
                 #:tree-files #:copy-directory #:digest-tree #:digest-file
                 #:unique-id #:now #:sequence-list #:safe-relative-p)
-  (:import-from #:40ants-ai-evals/src/history #:summarize #:print-summary)
-  (:import-from #:40ants-ai-evals/src/agents
+  (:import-from #:40ants-ai-evals/history #:summarize #:print-summary)
+  (:import-from #:40ants-ai-evals/agents
                 #:selected-agents #:profile-for #:provider-label #:render-task)
   (:export #:run-eval #:replay-run #:validate-options #:grading-vars))
-(in-package #:40ants-ai-evals/src/runner)
+(in-package #:40ants-ai-evals/runner)
 
 (defparameter *skill-path* "plugins/common-lisp-skills/skills/writing-common-lisp/")
 (defparameter *suite-path* "evals/writing-common-lisp/")
@@ -51,7 +60,7 @@
     (when (and (equal agents '("opencode")) (gethash "effort" flags))
       (error "--effort applies only to Codex: ~A" (gethash "effort" flags)))
     (when (member "opencode" agents :test #'equal)
-      (40ants-ai-evals/src/providers/opencode:model-reference
+      (40ants-ai-evals/providers/opencode:model-reference
        (field (profile-for "opencode" flags) "model"))))
   (integer-option flags "repeat" 1 1 20)
   (integer-option flags "timeout" 240000 1 3600000)
@@ -69,7 +78,7 @@
 (defun grading-vars (vars)
   "Apply this suite's declared check defaults, keeping historical expectations intact."
   (let ((config (read-json (at (at (root) *suite-path*) "promptfooconfig.json"))))
-    (40ants-ai-evals/src/checks:merge-vars (field config "defaultTest" "vars") vars)))
+    (40ants-ai-evals/checks:merge-vars (field config "defaultTest" "vars") vars)))
 
 (-> validate-extension-paths (hash-table)
     t)
@@ -93,7 +102,7 @@
     (dolist (case cases)
       (let ((vars (grading-vars (field case "vars"))))
         (validate-extension-paths vars)
-        (40ants-ai-evals/src/checks:validate-plan vars)
+        (40ants-ai-evals/checks:validate-plan vars)
         (setf (gethash "vars" case) vars)))
     cases))
 
@@ -152,10 +161,17 @@
           (delete-file archive)
           (remove-directory unpack))
         (copy-directory (at (root) (option flags "skill-dir" *skill-path*)) skill))
-    (dolist (directory '("evals/" "src/" "roswell/" "tests/" "nix/"))
+    (dolist (directory '("evals/" "src/" "roswell/" "t/" "nix/"))
       (copy-directory (at (root) directory) (at harness directory)))
-    (dolist (file '("shell.nix" "40ants-ai-evals.asd" "qlfile" "qlfile.lock"))
+    ;; Generated HTML is deliberately excluded; Lisp docs supply the system version.
+    (dolist (relative (tree-files (at (root) "docs/") :exclude '("build")))
+      (let ((target (at (at harness "docs/") relative)))
+        (ensure-directories-exist target)
+        (uiop:copy-file (at (at (root) "docs/") relative) target)))
+    (dolist (file '("shell.nix" "qlfile" "qlfile.lock" "README.md"))
       (uiop:copy-file (at (root) file) (at harness file)))
+    (dolist (asd (uiop:directory-files (root) "*.asd"))
+      (uiop:copy-file asd (at harness (file-namestring asd))))
     harness))
 
 (-> prepare-fixtures (t list list list)
@@ -330,7 +346,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                        (not (field metadata "skillEval")))
               (handler-case
                   (let* ((vars (or (field result "testCase" "vars") (field result "vars")))
-                         (answer (40ants-ai-evals/src/collector:collect-and-grade
+                         (answer (40ants-ai-evals/collector:collect-and-grade
                                   (dict "protocolVersion" 1 "runDir" (namestring run-dir)
                                         "output" (field response "output")
                                         "context" (dict "vars" vars "providerResponse" response
@@ -376,7 +392,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
              (handler-case
                  (progn
                    (when (member "opencode" agents :test #'equal)
-                     (setf server (40ants-ai-evals/src/providers/opencode:start-server run-dir)))
+                     (setf server (40ants-ai-evals/providers/opencode:start-server run-dir)))
                    (let* ((config (effective-config run-dir cases flags auth-dir
                                                     (field info "profiles") server))
                           (args (append (environment-arguments run-dir harness info)
@@ -401,7 +417,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                (if (and (zerop status) (true-p (field summary "coverageComplete"))
                         (every (lambda (row) (true-p (field row "pass")))
                                (sequence-list (field summary "rows")))) 0 1))))
-      (when server (40ants-ai-evals/src/providers/opencode:stop-server server))
+      (when server (40ants-ai-evals/providers/opencode:stop-server server))
       (remove-directory auth-dir))))
 
 (-> grader-fingerprint ()
@@ -410,9 +426,11 @@ Only the local export is enriched; Promptfoo's database is left untouched."
   (let ((hashes (dict)))
     (dolist (dir '("src/" "evals/checks/" "roswell/"))
       (setf (gethash dir hashes) (digest-tree (at (root) dir))))
-    (dolist (file '("40ants-ai-evals.asd" "qlfile.lock"
+    (dolist (file '("docs/changelog.lisp" "qlfile.lock"
                     "evals/writing-common-lisp/promptfooconfig.json"))
       (setf (gethash file hashes) (digest-file (at (root) file))))
+    (dolist (asd (uiop:directory-files (root) "*.asd"))
+      (setf (gethash (file-namestring asd) hashes) (digest-file asd)))
     (ironclad:byte-array-to-hex-string
      (ironclad:digest-sequence :sha256 (babel:string-to-octets (encode hashes) :encoding :utf-8)))))
 
@@ -436,7 +454,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                                            (field sample "variant")) id))) cases)))
         (unless case (error "Cannot map archived sample to a test case: ~A" id))
         (push (dict "sampleId" id
-                    "grading" (40ants-ai-evals/src/grading/contracts:grade
+                    "grading" (40ants-ai-evals/grading/contracts:grade
                                sample (grading-vars (field case "vars")))) report)))
     (let ((result (dict "runId" (field info "id") "replayedAt" (now)
                         "graderSuiteHash" (grader-fingerprint)

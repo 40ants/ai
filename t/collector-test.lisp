@@ -1,13 +1,14 @@
 ;;;; Exercise the Lisp collector against a real disposable workspace.
-(uiop:define-package #:40ants-ai-evals/tests/collector-test
+(uiop:define-package #:40ants-ai-evals-tests/collector-test
   (:use #:cl)
   (:import-from #:serapeum #:dict #:->)
   (:import-from #:rove #:deftest #:testing #:ok #:signals)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:at #:field #:encode #:read-json #:write-json #:write-text #:temporary-directory
                 #:remove-directory #:true-p #:run-command #:root)
-  (:import-from #:40ants-ai-evals/src/collector #:collect-and-grade))
-(in-package #:40ants-ai-evals/tests/collector-test)
+  (:import-from #:40ants-ai-evals/collector #:collect-and-grade)
+  (:import-from #:40ants-ai-evals/runner #:grading-vars))
+(in-package #:40ants-ai-evals-tests/collector-test)
 
 (-> collector-request (pathname)
     hash-table)
@@ -15,7 +16,7 @@
   (dict "protocolVersion" 1 "output" "I used writing-common-lisp"
         "runDir" (namestring (at scratch "run/"))
         "context"
-        (dict "vars" (40ants-ai-evals/src/runner:grading-vars
+        (dict "vars" (40ants-ai-evals/runner:grading-vars
                        (dict "id" "negative" "shouldTrigger" 'yason:false
                              "textFile" "hello.py" "textContains" "hello"))
               "provider" (dict "label" "with-skill") "prompt" "Create hello.py"
@@ -78,7 +79,7 @@
                           (list "node" "-e" invoke
                                 (namestring (at (root) "evals/lib/promptfoo-adapter.cjs"))
                                 (encode request))) :timeout 90)))
-    (40ants-ai-evals/src/util:decode stdout)))
+    (40ants-ai-evals/util:decode stdout)))
 
 (deftest adapter-round-trip
   (let ((scratch (temporary-directory "adapter-test")))
@@ -168,7 +169,7 @@
     (setf (gethash "skillCalls" (field request "context" "providerResponse" "metadata"))
           (vector (dict "name" "writing-common-lisp" "is_error" 'yason:true)))
     (ok (not (true-p
-              (field (40ants-ai-evals/src/collector::provider-statistics
+              (field (40ants-ai-evals/collector::provider-statistics
                       (field request "context" "providerResponse")
                       (dict "items" #()) "codex") "skillRead"))))))
 

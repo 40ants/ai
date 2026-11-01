@@ -1,14 +1,14 @@
 ;;;; Offline protocol fixtures for the pinned OpenCode v2 API.
-(uiop:define-package #:40ants-ai-evals/tests/opencode-test
+(uiop:define-package #:40ants-ai-evals-tests/opencode-test
   (:use #:cl)
   (:import-from #:serapeum #:dict #:->)
   (:import-from #:rove #:deftest #:ok #:signals)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:at #:write-text #:read-json #:temporary-directory
                 #:remove-directory #:true-p)
-  (:import-from #:40ants-ai-evals/src/providers/opencode
+  (:import-from #:40ants-ai-evals/providers/opencode
                 #:model-reference #:normalize-transcript #:call-agent #:*http-request*))
-(in-package #:40ants-ai-evals/tests/opencode-test)
+(in-package #:40ants-ai-evals-tests/opencode-test)
 
 (-> assistant-fixture ()
     hash-table)

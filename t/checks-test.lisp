@@ -1,15 +1,16 @@
 ;;;; Public extension API, independent of any Common Lisp source conventions.
-(uiop:define-package #:40ants-ai-evals/tests/checks-test
+(uiop:define-package #:40ants-ai-evals-tests/checks-test
   (:use #:cl)
   (:import-from #:serapeum #:-> #:dict)
   (:import-from #:rove #:deftest #:testing #:ok #:signals)
-  (:import-from #:40ants-ai-evals/src/util #:field #:true-p #:decode #:encode #:root #:at
+  (:import-from #:40ants-ai-evals/util #:field #:true-p #:decode #:encode #:root #:at
                 #:run-command #:temporary-directory #:remove-directory #:copy-directory
                 #:write-json #:write-text)
-  (:import-from #:40ants-ai-evals/src/checks
+  (:import-from #:40ants-ai-evals/checks
                 #:register-check #:register-profile #:validate-plan #:execute-plan
-                #:make-context #:cached #:outcome))
-(in-package #:40ants-ai-evals/tests/checks-test)
+                #:make-context #:cached #:outcome)
+  (:import-from #:40ants-ai-evals/grading/contracts #:grade))
+(in-package #:40ants-ai-evals-tests/checks-test)
 
 (defvar *computations* 0)
 
@@ -62,7 +63,7 @@
 (deftest missing-handlers-and-empty-outcomes
   (ok (signals (register-check "tests/missing" 'undefined-handler)))
   (ok (signals
-        (40ants-ai-evals/src/grading/contracts:grade
+        (40ants-ai-evals/grading/contracts:grade
          (dict "files" (dict) "skillRead" 'yason:false)
          (dict "checks" #("tests/skip"))))))
 
@@ -89,7 +90,7 @@
                         (vector
                          (dict "system" "40ants-ai-evals-example-check"
                                "asd"
-                               "tests/fixtures/example-check/40ants-ai-evals-example-check.asd"))
+                               "t/fixtures/example-check/40ants-ai-evals-example-check.asd"))
                         "checks" (vector (dict "check" "example/no-fixme"
                                                "params" (dict "file" "review.txt")))))
              (request (dict "sample" (dict "files" (dict "review.txt" content)
@@ -108,8 +109,11 @@
          (progn
            (copy-directory (at (root) "src/") (at scratch "src/"))
            (copy-directory (at (root) "roswell/") (at scratch "roswell/"))
-           (uiop:copy-file (at (root) "40ants-ai-evals.asd")
-                           (at scratch "40ants-ai-evals.asd"))
+           (loop for asd-file in (directory (at (root) "*.asd")) do
+             (uiop:copy-file asd-file (at scratch (file-namestring asd-file))))
+           (ensure-directories-exist (at scratch "docs/changelog.lisp"))
+           (uiop:copy-file (at (root) "docs/changelog.lisp")
+                           (at scratch "docs/changelog.lisp"))
            (write-json (at scratch "evals/writing-common-lisp/promptfooconfig.json")
                        (dict "defaultTest" (dict "vars" (dict))))
            (write-json (at scratch "evals/writing-common-lisp/cases.json")

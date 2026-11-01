@@ -1,11 +1,13 @@
 ;;;; Individually registered Common Lisp checks share one isolated reader/runtime call.
 (uiop:define-package #:40ants-ai-evals-common-lisp-checks/checks
   (:use #:cl)
+  (:import-from #:cl-ppcre)
+  (:import-from #:yason)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:true-p #:decode #:sequence-list #:root #:at
                 #:temporary-directory #:remove-directory #:write-text #:run-command)
-  (:import-from #:40ants-ai-evals/src/checks
+  (:import-from #:40ants-ai-evals/checks
                 #:register-check #:register-profile #:cached #:context-sample #:outcome))
 (in-package #:40ants-ai-evals-common-lisp-checks/checks)
 

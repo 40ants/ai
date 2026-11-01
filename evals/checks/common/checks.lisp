@@ -2,9 +2,9 @@
 (uiop:define-package #:40ants-ai-evals-common-checks/checks
   (:use #:cl)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:true-p #:json-equal-p #:sequence-list)
-  (:import-from #:40ants-ai-evals/src/checks
+  (:import-from #:40ants-ai-evals/checks
                 #:register-check #:register-profile #:context-sample #:outcome))
 (in-package #:40ants-ai-evals-common-checks/checks)
 

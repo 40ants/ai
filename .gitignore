@@ -5,3 +5,6 @@ apm_modules/
 .apm/
 
 .qlot/
+
+# 40ants-doc local output
+/docs/build/

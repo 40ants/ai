@@ -74,8 +74,9 @@ Create `evals/checks/project/my-eval-checks.asd`:
 
 ```lisp
 (asdf:defsystem "my-eval-checks"
-  :depends-on ("40ants-ai-evals")
-  :components ((:file "checks")))
+  :class :package-inferred-system
+  :license "Unlicense"
+  :depends-on ("my-eval-checks/checks"))
 ```
 
 Create `evals/checks/project/checks.lisp`:
@@ -83,19 +84,20 @@ Create `evals/checks/project/checks.lisp`:
 ```lisp
 (uiop:define-package #:my-eval-checks/checks
   (:use #:cl)
-  (:import-from #:40ants-ai-evals/src/util #:field)
-  (:import-from #:40ants-ai-evals/src/checks
+  (:import-from #:serapeum #:-> #:dict)
+  (:import-from #:40ants-ai-evals/util #:field)
+  (:import-from #:40ants-ai-evals/checks
                 #:register-check #:context-sample #:outcome))
 (in-package #:my-eval-checks/checks)
 
-(serapeum:-> no-fixme (hash-table hash-table)
+(-> no-fixme (hash-table hash-table)
     hash-table)
 (defun no-fixme (context params)
   (let ((text (field (context-sample context) "files" (field params "file"))))
     (outcome "no-fixme" (and (stringp text) (not (search "FIXME" text))))))
 
 (register-check "project/no-fixme" 'no-fixme
-                :parameters (serapeum:dict "file" "string"))
+                :parameters (dict "file" "string"))
 ```
 
 Add this entry to `defaultTest.vars.checkSystems` in the suite's Promptfoo config,
@@ -120,7 +122,7 @@ include its code. A third-party system installed by Qlot can omit `asd`; its
 version must be fixed in `qlfile.lock`. Run `qlot install` after adding library
 dependencies. ASDF extensions are trusted project code.
 
-`tests/fixtures/example-check/` is a runnable version of this example. Integration
+`t/fixtures/example-check/` is a runnable version of this example. Integration
 tests invoke it in a separate Roswell process with both clean text and FIXME text.
 
 ## Handler and result contract

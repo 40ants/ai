@@ -1,11 +1,12 @@
 ;;;; Domain-independent grading of a declared, extensible check plan.
-(uiop:define-package #:40ants-ai-evals/src/grading/contracts
+(uiop:define-package #:40ants-ai-evals/grading/contracts
   (:use #:cl)
+  (:import-from #:yason)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util #:field #:true-p #:bool #:decode)
-  (:import-from #:40ants-ai-evals/src/checks #:make-context #:validate-plan #:execute-plan)
+  (:import-from #:40ants-ai-evals/util #:field #:true-p #:bool #:decode)
+  (:import-from #:40ants-ai-evals/checks #:make-context #:validate-plan #:execute-plan)
   (:export #:grade))
-(in-package #:40ants-ai-evals/src/grading/contracts)
+(in-package #:40ants-ai-evals/grading/contracts)
 
 (-> grade (t hash-table)
     hash-table)

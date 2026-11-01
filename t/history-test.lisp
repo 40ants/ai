@@ -1,12 +1,12 @@
 ;;;; History compatibility and coverage checks do not require model calls.
-(uiop:define-package #:40ants-ai-evals/tests/history-test
+(uiop:define-package #:40ants-ai-evals-tests/history-test
   (:use #:cl)
   (:import-from #:serapeum #:dict)
   (:import-from #:rove #:deftest #:ok #:signals)
-  (:import-from #:40ants-ai-evals/src/util #:decode #:encode #:field #:true-p #:json-equal-p)
-  (:import-from #:40ants-ai-evals/src/history
+  (:import-from #:40ants-ai-evals/util #:decode #:encode #:field #:true-p #:json-equal-p)
+  (:import-from #:40ants-ai-evals/history
                 #:make-summary #:find-run #:compare-runs #:print-summary))
-(in-package #:40ants-ai-evals/tests/history-test)
+(in-package #:40ants-ai-evals-tests/history-test)
 
 (deftest json-round-trip
   (let* ((json "{\"null\":null,\"false\":false,\"true\":true,\"array\":[],\"unicode\":\"Суммы 🧮\"}")
@@ -171,11 +171,11 @@
                          "rows" (vector (dict "case" "one" "agent" "opencode" "pass" 'yason:true))))
          (printed (with-output-to-string (output)
                     (let ((*standard-output* output))
-                      (40ants-ai-evals/src/history::print-history-runs
+                      (40ants-ai-evals/history::print-history-runs
                        (list codex opencode) "opencode")))))
     (ok (not (search "codex-run" printed)))
     (ok (search "opencode-run  opencode  opencode-model  1/1 passed" printed))
-    (ok (signals (40ants-ai-evals/src/history::print-history-runs
+    (ok (signals (40ants-ai-evals/history::print-history-runs
                   (list codex opencode) "gemini")))))
 
 (deftest cross-agent-displays-selected-statistics

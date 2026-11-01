@@ -24,4 +24,4 @@ exec ros -Q -- "$0" "$@"
 (serapeum:-> main (&rest string)
     t)
 (defun main (&rest arguments)
-  (uiop:quit (40ants-ai-evals/src/cli:main arguments)))
+  (uiop:quit (40ants-ai-evals/cli:main arguments)))

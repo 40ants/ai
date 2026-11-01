@@ -17,7 +17,7 @@ exec ros -Q -- "$0" "$@"
     (asdf:load-asd (merge-pathnames "40ants-ai-evals.asd" root))
     (asdf:load-system "40ants-ai-evals")))
 
-(40ants-ai-evals/src/checks:load-check-systems
+(40ants-ai-evals/checks:load-check-systems
  (vector (serapeum:dict "system" "40ants-ai-evals-common-lisp-checks"
                         "asd"
                         "evals/checks/writing-common-lisp/40ants-ai-evals-common-lisp-checks.asd")))
@@ -35,5 +35,5 @@ exec ros -Q -- "$0" "$@"
     (unwind-protect
          (let ((evidence (40ants-ai-evals-common-lisp-checks/lisp-reader:inspect-source
                           filename package-name test-name)))
-           (format t "EVAL_JSON:~A~%" (40ants-ai-evals/src/util:encode evidence)))
+           (format t "EVAL_JSON:~A~%" (40ants-ai-evals/util:encode evidence)))
       (sb-ext:unschedule-timer deadline))))

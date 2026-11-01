@@ -1,12 +1,17 @@
 ;;;; JSON, files and bounded subprocesses shared by the harness.
-(uiop:define-package #:40ants-ai-evals/src/util
+(uiop:define-package #:40ants-ai-evals/util
   (:use #:cl)
+  (:import-from #:asdf)
+  (:import-from #:babel)
+  (:import-from #:ironclad)
+  (:import-from #:local-time)
+  (:import-from #:yason)
   (:import-from #:serapeum #:-> #:dict)
   (:export #:field #:true-p #:bool #:decode #:encode #:read-json #:write-json
            #:write-text #:root #:at #:temporary-directory #:remove-directory
            #:run-command #:tree-files #:copy-directory #:digest-tree #:digest-file
            #:unique-id #:now #:sequence-list #:json-equal-p #:safe-relative-p))
-(in-package #:40ants-ai-evals/src/util)
+(in-package #:40ants-ai-evals/util)
 
 (eval-when (:compile-toplevel :load-toplevel :execute) (require :sb-posix))
 

@@ -2,8 +2,8 @@
 (uiop:define-package #:40ants-ai-evals-example-check/check
   (:use #:cl)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util #:field)
-  (:import-from #:40ants-ai-evals/src/checks #:register-check #:context-sample #:outcome))
+  (:import-from #:40ants-ai-evals/util #:field)
+  (:import-from #:40ants-ai-evals/checks #:register-check #:context-sample #:outcome))
 (in-package #:40ants-ai-evals-example-check/check)
 
 (-> no-fixme (hash-table hash-table)

@@ -38,7 +38,7 @@ writes a separate report identifying the current grader and extensions.
 
 ## Verification
 
-The test fixture `tests/fixtures/example-check/` defines a separate ASDF system
+The test fixture `t/fixtures/example-check/` defines a separate ASDF system
 and registers `example/no-fixme`. Integration tests load it through a case's
 `checkSystems`, execute it through the Roswell CLI and verify passing and failing
 outputs. Adding it requires no changes to the core or built-in check systems.

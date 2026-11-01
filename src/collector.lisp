@@ -1,14 +1,14 @@
 ;;;; Archive native workspace evidence before Promptfoo disposes of it.
-(uiop:define-package #:40ants-ai-evals/src/collector
+(uiop:define-package #:40ants-ai-evals/collector
   (:use #:cl)
   (:import-from #:serapeum #:-> #:dict)
-  (:import-from #:40ants-ai-evals/src/util
+  (:import-from #:40ants-ai-evals/util
                 #:field #:bool #:decode #:sequence-list #:at #:unique-id
                 #:tree-files #:write-text #:write-json #:read-json #:safe-relative-p #:true-p)
-  (:import-from #:40ants-ai-evals/src/agents #:provider-identity)
-  (:import-from #:40ants-ai-evals/src/grading/contracts #:grade)
+  (:import-from #:40ants-ai-evals/agents #:provider-identity)
+  (:import-from #:40ants-ai-evals/grading/contracts #:grade)
   (:export #:collect-and-grade))
-(in-package #:40ants-ai-evals/src/collector)
+(in-package #:40ants-ai-evals/collector)
 
 (-> collect-files (pathname)
     hash-table)

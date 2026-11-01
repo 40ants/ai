@@ -1,10 +1,17 @@
 ;;;; Thin command dispatch shared by the Roswell entry point and tests.
-(uiop:define-package #:40ants-ai-evals/src/cli
+(uiop:define-package #:40ants-ai-evals/cli
   (:use #:cl)
+  (:import-from #:asdf)
+  (:import-from #:40ants-ai-evals/checks)
+  (:import-from #:40ants-ai-evals/collector)
+  (:import-from #:40ants-ai-evals/grading/contracts)
+  (:import-from #:40ants-ai-evals/history)
+  (:import-from #:40ants-ai-evals/providers/opencode)
+  (:import-from #:40ants-ai-evals/runner)
   (:import-from #:serapeum #:->)
-  (:import-from #:40ants-ai-evals/src/util #:decode #:encode #:field #:root #:at)
+  (:import-from #:40ants-ai-evals/util #:decode #:encode #:field #:root #:at)
   (:export #:main))
-(in-package #:40ants-ai-evals/src/cli)
+(in-package #:40ants-ai-evals/cli)
 
 (-> parse-arguments (list)
     (values hash-table list &optional))
@@ -47,7 +54,7 @@
   (cond
     ((equal command "assert")
      (require-arguments flags positional nil 0 0)
-     (write-line (encode (40ants-ai-evals/src/collector:collect-and-grade
+     (write-line (encode (40ants-ai-evals/collector:collect-and-grade
                          (decode *standard-input*))))
      0)
     ((equal command "provider")
@@ -55,39 +62,39 @@
      (let ((request (decode *standard-input*)))
        (unless (eql 1 (field request "protocolVersion"))
          (error "Unsupported provider protocol: ~A" (field request "protocolVersion")))
-       (write-line (encode (40ants-ai-evals/src/providers/opencode:call-agent request))))
+       (write-line (encode (40ants-ai-evals/providers/opencode:call-agent request))))
      0)
     ((equal command "grade")
      (require-arguments flags positional nil 0 0)
      (let ((request (decode *standard-input*)))
-       (write-line (encode (40ants-ai-evals/src/grading/contracts:grade
+       (write-line (encode (40ants-ai-evals/grading/contracts:grade
                             (field request "sample")
-                            (40ants-ai-evals/src/runner:grading-vars (field request "vars"))))))
+                            (40ants-ai-evals/runner:grading-vars (field request "vars"))))))
      0)
     ((equal command "test")
      (require-arguments flags positional nil 0 0)
-     (40ants-ai-evals/src/checks:load-check-systems
-      (field (40ants-ai-evals/src/runner:grading-vars (serapeum:dict)) "checkSystems"))
+     (40ants-ai-evals/checks:load-check-systems
+      (field (40ants-ai-evals/runner:grading-vars (serapeum:dict)) "checkSystems"))
      (asdf:test-system "40ants-ai-evals")
      0)
     ((equal command "checks")
      (require-arguments flags positional nil 0 0)
-     (40ants-ai-evals/src/checks:load-check-systems
-      (field (40ants-ai-evals/src/runner:grading-vars (serapeum:dict)) "checkSystems"))
-     (write-line (encode (40ants-ai-evals/src/checks:describe-checks)))
+     (40ants-ai-evals/checks:load-check-systems
+      (field (40ants-ai-evals/runner:grading-vars (serapeum:dict)) "checkSystems"))
+     (write-line (encode (40ants-ai-evals/checks:describe-checks)))
      0)
     ((equal command "run")
      (when positional (error "Unexpected run arguments: ~A" positional))
-     (40ants-ai-evals/src/runner:run-eval flags))
+     (40ants-ai-evals/runner:run-eval flags))
     ((equal command "history")
      (require-arguments flags positional '("agent") 0 0)
-     (40ants-ai-evals/src/history:print-history :agent (gethash "agent" flags))
+     (40ants-ai-evals/history:print-history :agent (gethash "agent" flags))
      0)
     ((equal command "compare")
      (require-arguments flags positional '("allow-mismatch" "agent" "before-agent" "after-agent") 0 2)
-     (40ants-ai-evals/src/history:compare-runs
-      (40ants-ai-evals/src/history:find-run (or (first positional) "previous"))
-      (40ants-ai-evals/src/history:find-run (or (second positional) "latest"))
+     (40ants-ai-evals/history:compare-runs
+      (40ants-ai-evals/history:find-run (or (first positional) "previous"))
+      (40ants-ai-evals/history:find-run (or (second positional) "latest"))
       :allow-mismatch (gethash "allow-mismatch" flags)
       :agent (gethash "agent" flags)
       :before-agent (gethash "before-agent" flags)
@@ -97,10 +104,10 @@
      (require-arguments flags positional nil 1 1)
      (let* ((argument (first positional))
             (run (unless (uiop:directory-exists-p argument)
-                   (40ants-ai-evals/src/history:find-run argument)))
+                   (40ants-ai-evals/history:find-run argument)))
             (dir (if run (at (root) (format nil ".evals/runs/~A/" (field run "id")))
                      (uiop:ensure-absolute-pathname argument)))
-            (result (40ants-ai-evals/src/runner:replay-run dir)))
+            (result (40ants-ai-evals/runner:replay-run dir)))
        (format t "Regraded ~D samples; report: ~A~%" (length (field result "samples"))
                (at dir "replay-lisp.json")))
      0)

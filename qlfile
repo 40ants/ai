@@ -1,2 +1,5 @@
 # Use the same Quicklisp release as the pre-migration Nix Lisp packages.
 ql :all 2026-01-01
+
+# Documentation theme is absent from this Quicklisp snapshot; pin its source.
+github 40ants-doc-theme-40ants 40ants/40ants-doc-theme-40ants :ref 5172e5447da6ddf473861f123bb62f6627412bc1
