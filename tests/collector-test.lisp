@@ -4,7 +4,7 @@
   (:import-from #:serapeum #:dict #:->)
   (:import-from #:rove #:deftest #:testing #:ok #:signals)
   (:import-from #:40ants-ai-evals/src/util
-                #:at #:field #:encode #:read-json #:write-text #:temporary-directory
+                #:at #:field #:encode #:read-json #:write-json #:write-text #:temporary-directory
                 #:remove-directory #:true-p #:run-command #:root)
   (:import-from #:40ants-ai-evals/src/collector #:collect-and-grade))
 (in-package #:40ants-ai-evals/tests/collector-test)
@@ -112,4 +112,77 @@
               (ok (and (stringp error) (search expected error))
                   (format nil "Expected ~S, received ~S" expected error))
               (ok (equal error (field response "metadata" "skillEval" "infrastructureError"))))))
+      (remove-directory scratch))))
+
+(-> open-code-request (pathname)
+    hash-table)
+(defun open-code-request (scratch)
+  (let* ((request (collector-request scratch))
+         (response (field request "context" "providerResponse"))
+         (metadata (field response "metadata")))
+    (write-json (at scratch "run/opencode/native-trace.json")
+                (dict "agent" "opencode" "export" (dict "data" (dict "messages" #()))
+                      "log" "raw session events"))
+    (setf (gethash "provider" (field request "context")) (dict "label" "opencode:with-skill")
+          (gethash "agent" metadata) "opencode" (gethash "variant" metadata) "with-skill"
+          (gethash "tracePath" metadata) (namestring (at scratch "run/opencode/native-trace.json"))
+          (gethash "skillRead" metadata) 'yason:false
+          (gethash "commandCount" metadata) 2
+          (gethash "usage" metadata) (dict "input_tokens" 12 "output_tokens" 3
+                                         "reasoning_tokens" 4 "cached_input_tokens" 5
+                                         "total_tokens" 24)
+          (gethash "sessionId" response) "session-one")
+    request))
+
+(deftest opencode-collection-and-error-archive
+  (let ((scratch (temporary-directory "opencode-collector")))
+    (unwind-protect
+         (progn
+           (write-text (at scratch "workspace/hello.py") "hello")
+           (write-text (at scratch "workspace/.opencode/skills/writing-common-lisp/SKILL.md") "owned")
+           (let* ((request (open-code-request scratch))
+                  (answer (collect-and-grade request)) (stats (field answer "sample"))
+                  (sample (read-json (at scratch (format nil "run/samples/~A/sample.json"
+                                                         (field stats "sampleId"))))))
+             (ok (true-p (field answer "grading" "pass")))
+             (ok (equal "opencode" (field stats "agent")))
+             (ok (equal "with-skill" (field stats "variant")))
+             (ok (equal "session" (field stats "usageScope")))
+             (ok (= 1 (hash-table-count (field sample "files"))))
+             (ok (equal "raw session events" (field (read-json (at (field request "runDir")
+                                                                          (field stats "trace"))) "log")))
+             (setf (gethash "error" (field request "context" "providerResponse")) "model timeout")
+             (let ((partial (collect-and-grade request)))
+               (ok (search "model timeout" (field partial "infrastructureError")))
+               (ok (probe-file (at (field request "runDir")
+                                   (format nil "samples/~A/files/hello.py"
+                                           (field partial "sample" "sampleId"))))))
+             (setf (gethash "tracePath" (field request "context" "providerResponse" "metadata"))
+                   (namestring (at scratch "outside.json")))
+             (write-json (at scratch "outside.json") (dict))
+             (ok (signals (collect-and-grade request)))))
+      (remove-directory scratch))))
+
+(deftest failed-codex-skill-evidence
+  (let ((request (collector-request #P"/tmp/unused/")))
+    (setf (gethash "skillCalls" (field request "context" "providerResponse" "metadata"))
+          (vector (dict "name" "writing-common-lisp" "is_error" 'yason:true)))
+    (ok (not (true-p
+              (field (40ants-ai-evals/src/collector::provider-statistics
+                      (field request "context" "providerResponse")
+                      (dict "items" #()) "codex") "skillRead"))))))
+
+(deftest adapter-failure-preserves-normalized-identity
+  (let ((scratch (temporary-directory "adapter-normalized-error")))
+    (unwind-protect
+         (progn
+           (write-text (at scratch "workspace/hello.py") "hello")
+           (let ((request (collector-request scratch)))
+             (setf (gethash "provider" (field request "context"))
+                   (dict "label" "codex:with-skill")
+                   (gethash "checks" (field request "context" "vars")) #("missing/check"))
+             (let ((result (invoke-adapter request)))
+               (ok (stringp (field result "error")))
+               (ok (equal "codex" (field result "metadata" "skillEval" "agent")))
+               (ok (equal "with-skill" (field result "metadata" "skillEval" "variant"))))))
       (remove-directory scratch))))

@@ -2,11 +2,13 @@
 (asdf:defsystem "40ants-ai-evals"
   :description "Reproducible skill evaluations through Promptfoo"
   :version "0.1.0"
-  :depends-on ("serapeum" "yason" "ironclad" "babel" "local-time" "cl-ppcre")
+  :depends-on ("serapeum" "yason" "ironclad" "babel" "local-time" "cl-ppcre" "dexador")
   :serial t
   :components ((:file "src/util")
+               (:file "src/agents")
                (:file "src/checks")
                (:file "src/grading/contracts")
+               (:file "src/providers/opencode")
                (:file "src/collector")
                (:file "src/history")
                (:file "src/runner")
@@ -20,7 +22,9 @@
   :components ((:file "tests/grading/contracts-test")
                (:file "tests/collector-test")
                (:file "tests/history-test")
-               (:file "tests/checks-test"))
+               (:file "tests/checks-test")
+               (:file "tests/agents-test")
+               (:file "tests/opencode-test"))
   :perform (asdf:test-op (op system)
              (declare (ignore op))
              (unless (uiop:symbol-call '#:rove '#:run system)

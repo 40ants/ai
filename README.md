@@ -155,14 +155,17 @@ Note: this validator requires `PyYAML` in the active Python environment.
 
 ## Test Skills with Promptfoo
 
-The first behavioral suite is for `writing-common-lisp`. The suite asks Codex to edit disposable projects through Promptfoo's
-native Codex SDK provider, captures its turn and output files, then reads and
-runs the Lisp with SBCL and Serapeum.
+The first behavioral suite is for `writing-common-lisp`. It asks an agent to
+edit a disposable project, captures its transcript and generated files, then
+reads and runs the Lisp with SBCL and Serapeum. The same cases, prompts and
+checks run through either Codex or OpenCode. Codex remains the default.
 
 The harness is the ASDF system `40ants-ai-evals`, with Roswell entry points.
 [ADR 0001](evals/docs/decisions/0001-common-lisp-with-promptfoo-js-adapter.md)
-records why one thin JavaScript adapter remains at the Promptfoo boundary.
-Its [JSON protocol](evals/docs/adapter-protocol.md) keeps collection and grading in Lisp.
+records the original Promptfoo-to-Lisp adapter. [ADR 0003](evals/docs/decisions/0003-opencode-2.md)
+records the OpenCode integration. The [JSON protocols](evals/docs/adapter-protocol.md)
+keep provider lifecycle, collection and grading in Lisp; JavaScript only carries
+JSON across Promptfoo's custom-provider boundary.
 
 ### 1. Enter the pinned environment
 
@@ -173,12 +176,14 @@ qlot install
 ```
 
 `shell.nix` pins nixpkgs by commit and SHA-256, Promptfoo **0.125.1**, Codex
-SDK and CLI **0.156.1**, APM **0.31.0**, Node.js **22.23.4**, SBCL **2.6.8**, Roswell **26.10.117** and Qlot **1.8.2**.
+SDK and CLI **0.156.1**, OpenCode **2.2.1**, APM **0.31.0**, Node.js **22.23.4**,
+SBCL **2.6.8**, Roswell **26.10.117** and Qlot **1.8.2**.
 `qlfile` and `qlfile.lock` pin project libraries to Quicklisp **2026-01-01**,
 including the same Serapeum release as before the Lisp migration. `nix/promptfoo/package-lock.json` pins the published npm packages
 and their complete dependency graph; Nix also checks the downloaded dependency
-hash. The native provider requires SDK `^0.156.1`, so its matching CLI replaces
-the previous 0.165.0 CLI only inside this shell. The new Promptfoo uses libSQL;
+hash. The native Codex provider requires SDK `^0.156.1`, so its matching CLI
+replaces the previous 0.165.0 CLI only inside this shell. OpenCode's pinned
+CLI is on the shell PATH; the Lisp provider calls its HTTP API v2 directly. The new Promptfoo uses libSQL;
 the old better-sqlite3 rebuild workaround is removed. The shell targets Apple
 Silicon macOS. Nix downloads dependencies to its store without installing global npm
 packages or changing a Homebrew installation/user Nix profile.
@@ -196,6 +201,7 @@ Check the tools yourself:
 ```bash
 promptfoo --version
 codex --version
+opencode --version
 apm --version
 sbcl --version
 node --version
@@ -221,12 +227,14 @@ to discover the installed skills.
 Open `evals/writing-common-lisp/promptfooconfig.json`:
 
 - `prompts` selects the user request (`{{task}}`).
-- `providers` uses Promptfoo's built-in `openai:codex-sdk` provider.
-- `copy_working_dir: copy` gives every call/repeat a fresh workspace, retained
-  until assertions finish and then removed by Promptfoo.
-- `defaultTest.assert` calls the transport adapter `evals/lib/promptfoo-adapter.cjs`.
-  It sends JSON to `roswell/ai-evals.ros assert`, which archives files in
-  `src/collector.lisp`. The core in `src/checks.lisp` resolves named check plans;
+- the runner selects Promptfoo's native Codex SDK provider or the custom
+  `evals/lib/opencode-provider.cjs` provider, based on `--agent`.
+- Each sample/repeat and skill variant gets a fresh workspace and provider
+  session. Artifacts are copied into the run before Promptfoo discards the
+  temporary working directory.
+- `defaultTest.assert` calls `evals/lib/promptfoo-adapter.cjs`. It sends JSON to
+  `roswell/ai-evals.ros assert`, which archives files in `src/collector.lisp`.
+  The core in `src/checks.lisp` resolves named check plans;
   independent ASDF systems under `evals/checks/` implement the rules.
   Real reader/runtime checks execute in a separate process through
   `roswell/check-lisp.ros`. Promptfoo waits for the assertion before cleanup.
@@ -248,12 +256,18 @@ dispatch, error reporting, unused parameters, hook contracts, project overrides,
 protected `.qlot/` dependencies, and a negative Python routing case.
 
 The runner prepares fixture templates with a Git root and a snapshot of the
-tested skill. Promptfoo creates a fresh copy for each sample. The runner uses
-a temporary Codex home with no personal configuration, and disables user and
-admin skills for this process. It reuses existing Codex file-based login
-state; no API key or paid model grader is needed. Each run still consumes the
-model allowance of that login. If file-based authentication is unavailable,
-authenticate the pinned Codex CLI with `codex login` first.
+tested skill. Its default profiles are Codex `gpt-6-sol` at medium effort and
+OpenCode `zai-coding-plan/glm-5.3` in build mode. OpenCode's server is
+started per run on loopback with private config, cache, data and state directories. It
+imports only the `zai-coding-plan` credential from
+`~/.local/share/opencode/auth.json`; set `SKILL_EVAL_OPENCODE_AUTH_FILE` to use
+another auth file. It does not load personal OpenCode plugins or MCP servers.
+OpenCode can still apply system-managed policy from
+`/Library/Application Support/opencode/opencode.json`; the API has no option to
+disable that global policy. The Codex path reuses existing Codex file-based
+login state. Evaluation calls consume the allowance or API credits of the
+selected account. No model grader is
+used.
 
 ### 3. Calibrate the grader before trusting it
 
@@ -271,27 +285,46 @@ The calibration suite checks known-good code and intentional defects, including
 wrong arithmetic despite correct style. Passing calibration is evidence about
 the grader, not evidence that the skill passed a real model evaluation.
 
-### 4. Run one case, then establish a baseline
+### 4. Start with one case
 
 ```bash
-qlot exec ros roswell/ai-evals.ros run --label smoke --filter package-path
-qlot exec ros roswell/ai-evals.ros run --label baseline
+qlot exec ros roswell/ai-evals.ros run --label opencode-package \
+  --agent opencode --filter package-path --repeat 1
 ```
 
-The second command runs all development cases. Exit code zero requires every
-expected sample to be present and passing, with no infrastructure errors. A
-failed requirement is a useful result: inspect the artifact before changing
-either the skill or its test. Do not weaken an assertion just to turn it green.
+To run the same case through both agents and then run a matched ablation for
+both, keep the case filter fixed:
 
-Routing evidence comes from Promptfoo's native `metadata.skillCalls`. It is
-still a heuristic based on direct `SKILL.md` reads, not a first-class SDK skill
-invocation event. Our previous command-matching heuristic and custom provider
-have been removed. For a suspicious routing failure, inspect `turn.json`.
+```bash
+qlot exec ros roswell/ai-evals.ros run --label package-both --agent all --filter package-path --repeat 1
+qlot exec ros roswell/ai-evals.ros run --label package-ablation \
+  --agent all --filter package-path --repeat 1 --ablation
+```
+
+Each command makes model calls. Begin with the one-case run; the full matrix is
+opt-in below. Exit code zero requires every expected sample to be present and
+passing, with no infrastructure errors. Inspect artifacts after a failure
+before changing the skill or its test.
+
+Runs default to one repeat and `--timeout 240000` ms for the overall Promptfoo
+evaluation deadline. For OpenCode, a portion of that deadline is reserved for
+interrupting the session, exporting its trace and grading: the inner execution
+timeout is `timeout - min(30000, floor(timeout / 4))`, or 210000 ms by default.
+The manifest records the overall timeout; the selected profile records its
+execution timeout. Codex and OpenCode workflows can have different effective
+turn limits, so use within-profile runs to measure skill regressions. Use
+`--repeat` and `--timeout` when you intentionally want a larger or longer run.
+
+Codex routing evidence uses Promptfoo's native `metadata.skillCalls`. OpenCode
+routing evidence uses recorded completed skill/read tool calls. Both are runtime
+evidence, not proof that every instruction affected the answer. Inspect the
+archived transcript when a routing result looks wrong.
 
 ### 5. Read the accumulated history
 
 ```bash
 qlot exec ros roswell/ai-evals.ros history
+qlot exec ros roswell/ai-evals.ros history --agent opencode
 qlot exec ros roswell/ai-evals.ros view
 ```
 
@@ -302,20 +335,22 @@ stop the viewer. No Promptfoo Cloud account or result sharing is configured.
 Every run also gets a unique directory under `.evals/runs/` containing:
 
 ```text
-manifest.json          Git revision/status, tool versions, model/effort,
+manifest.json          Git revision/status, tool versions, per-agent profiles,
                        case list, repeat count, skill hash and suite hash
 skill/                 Exact skill directory used by that run
 harness/               Snapshot of eval code, tests, shell.nix and npm lockfile
 results.json           Full Promptfoo export
 summary.json           Per-case results, failures/errors, efficiency statistics
 fixtures/              Immutable starting project templates for native copies
-samples/<sample-id>/   Actual prompt, turn.json, sample.json, generated files
+samples/<sample-id>/   Prompt, full provider trace, sample.json, generated files
 ```
 
-Both passing and failing runs remain in history. Authentication files stay in
-temporary runtime directories and are not copied into these artifacts. The
-working copy is removed by Promptfoo after each sample; the authentication
-directory is removed after the run. Generated files and turns remain archived.
+Both passing and failing runs remain in history. Authentication values are not
+copied into artifacts. The OpenCode server and its private state are removed at
+run end; Codex authentication is mounted only in its temporary runtime home.
+OpenCode fixture templates remain under the run directory. Per-sample copies
+are created under the server's private state directory and removed when the
+server stops after assertions; generated files and full traces stay archived.
 Old runs keep their original JSONL artifacts and remain readable in history.
 
 Before the 0.125.1 migration, a consistent SQLite backup was saved under
@@ -338,25 +373,30 @@ This writes `replay-lisp.json` beside the original run. Historical harness
 snapshots retain their original JS files; active project code uses the Lisp CLI.
 A migration changes the suite hash and recorded tools, so comparisons across
 this boundary require inspecting settings and using `--allow-mismatch` explicitly.
-Establish a fresh baseline for subsequent skill edits. The existing `skill-read`
-check retains its earlier semantics: automatic skill injection by Codex can still
+Establish a fresh baseline for subsequent skill edits. The Codex `skill-read`
+check retains its earlier semantics: automatic skill injection can still
 produce a false negative in Promptfoo's skill-call evidence.
 
 ### 6. Compare a change with any earlier version
 
 ```bash
 # After making one intentional change to SKILL.md:
-qlot exec ros roswell/ai-evals.ros run --label candidate
-qlot exec ros roswell/ai-evals.ros compare baseline candidate
+qlot exec ros roswell/ai-evals.ros run --label candidate --agent opencode --filter package-path
+qlot exec ros roswell/ai-evals.ros compare baseline candidate --agent opencode
 
-# Or use exact IDs printed by history:
-qlot exec ros roswell/ai-evals.ros compare previous latest
+# Compare both agents from the same run explicitly:
+qlot exec ros roswell/ai-evals.ros compare package-both package-both \
+  --before-agent codex --after-agent opencode
 ```
 
-Use unique labels or exact run IDs. Comparison checks that the test suite,
-selected cases, repetitions, model, effort and tool versions match. It refuses
-to treat incompatible runs as a direct regression comparison. For an intentional
-exploration, `--allow-mismatch` prints the differences explicitly.
+Use unique labels or exact run IDs. Same-agent comparison checks the test suite,
+selected cases, repetitions, model and relevant tool versions. Cross-agent
+comparison is descriptive: it cannot isolate agent differences from their
+models, runtimes and turn limits. This is a practical agent-workflow
+comparison, not a controlled skill-only comparison. Measure skill regressions
+within the same profile. `--model` is for a single selected agent; `--effort` applies
+only to Codex. `--agent all` uses each profile's defaults. Use `--allow-mismatch`
+for an intentional same-agent exploration with differing settings.
 
 You can evaluate an old skill from **any Git commit** with today's test suite:
 
@@ -369,38 +409,37 @@ only that commit's skill directory; it never checks out a different branch or
 changes the current skill. To evaluate a separate experimental copy, use
 `--skill-dir /absolute/path/to/writing-common-lisp` instead of `--ref`.
 
-Model names such as `gpt-6-sol` are server-managed aliases, so pinned client
-tools do not freeze the model weights. Keep model/effort constant when measuring
-a skill change; use an exact model snapshot if the provider makes one available.
+Model references such as `gpt-6-sol` and `zai-coding-plan/glm-5.3` are provider-managed,
+so pinned client tools do not freeze model weights. Keep the agent and profile
+constant when measuring a skill change; cross-agent results are useful for
+practical workflow comparisons, not controlled skill-only comparisons.
 
-### 7. Separate consistency, value and generalization
+### 7. Run larger matrices when useful
 
 ```bash
-# Estimate variability: 9 cases × 3 independent samples.
-qlot exec ros roswell/ai-evals.ros run --label baseline-repeat --repeat 3
+# Full opt-in matrix: 11 cases × 3 repeats × 2 agents = 66 samples.
+qlot exec ros roswell/ai-evals.ros run --label full-matrix --agent all --group all --repeat 3
 
-# Matched control: with and without the skill, on fresh workspaces.
-qlot exec ros roswell/ai-evals.ros run --label ablation --ablation
+# Matched with/without-skill matrix: 11 × 3 × 2 agents × 2 variants = 132 samples.
+qlot exec ros roswell/ai-evals.ros run --label full-ablation --agent all --group all --repeat 3 --ablation
 
-# Evaluate the held-out scenarios after selecting an instruction change.
-qlot exec ros roswell/ai-evals.ros run --label holdout-check --group holdout --repeat 3
-
-# Or run both development and holdout cases together.
-qlot exec ros roswell/ai-evals.ros run --label full --group all
+# A smaller repeat run for one profile.
+qlot exec ros roswell/ai-evals.ros run --label opencode-repeat \
+  --agent opencode --filter package-path --repeat 3
 ```
 
 In ablation mode, the control receives the same task without an explicit
 `Use $writing-common-lisp` request, and the tested skill is absent. Other checks
-remain the same, except skill-read evidence does not apply to that control.
-This shows whether the instructions add value beyond the model's existing
-Common Lisp knowledge. It is a paired observational comparison, not a claim of
-statistical significance from a single sample.
+remain the same, except skill-read evidence does not apply to that control. This
+is a paired observational comparison, not a claim of statistical significance.
 
-The report retains passes, assertion failures, infrastructure errors, median
-tokens, command count and elapsed time separately. ChatGPT-login usage has no
-reliable per-call USD price here; `costUsd: null` means unknown, not zero.
-The native provider may display an estimated API cost in Promptfoo's UI. That
-estimate is not a charge or a measurement of ChatGPT subscription billing.
+The report retains passes, assertion failures, infrastructure errors, token
+usage, command count and elapsed time separately. OpenCode token totals include
+all assistant messages in the session, including compaction; command counts come
+from shell tool calls. Runtime turn limits and transport cleanup time may differ
+by provider. Per-call USD pricing is not known here, so `costUsd: null`
+means unknown, not zero. Choose a matrix size intentionally: every sample makes
+an evaluation call.
 
 ### 8. Extend checks without changing the core
 

@@ -14,6 +14,41 @@
 (defun present (value)
   (unless (eq value :null) value))
 
+(-> split-provider-label (t)
+    (values t t))
+(defun split-provider-label (label)
+  (if (stringp label)
+      (let ((parts (loop for agent in '("codex" "opencode" "codex-cli")
+                         for prefix = (concatenate 'string agent ":")
+                         when (and (<= (length prefix) (length label))
+                                   (string= prefix label :end2 (length prefix)))
+                           return (list (if (equal agent "codex-cli") "codex" agent)
+                                        (subseq label (length prefix))))))
+        (if parts
+            (values (first parts) (second parts))
+            (values "codex" label)))
+      (values "codex" label)))
+
+(-> row-agent-variant (hash-table t)
+    (values string t))
+(defun row-agent-variant (result sample)
+  (multiple-value-bind (provider-agent provider-variant)
+      (split-provider-label (or (field result "provider" "label")
+                                (field result "provider" "id")))
+    (values (or (present (field sample "agent")) provider-agent "codex")
+            (or (present (field sample "variant")) provider-variant :null))))
+
+(-> summary-row-agent-variant (hash-table)
+    (values string t))
+(defun summary-row-agent-variant (row)
+  "Read legacy summary rows, inferring Codex for rows without agent metadata."
+  (multiple-value-bind (provider-agent provider-variant)
+      (split-provider-label (field row "variant"))
+    (values (or (present (field row "agent")) provider-agent "codex")
+            (if (present (field row "agent"))
+                (field row "variant")
+                provider-variant))))
+
 (-> median (list)
     t)
 (defun median (values)
@@ -45,9 +80,9 @@
                    (error "Ambiguous label ~A; use an exact run ID" id))
                  (first labelled))))))
 
-(-> result-row (hash-table)
+(-> result-row (hash-table &optional hash-table)
     hash-table)
-(defun result-row (result)
+(defun result-row (result &optional profiles)
   (let* ((response (field result "response"))
          (sample (or (present (field response "metadata" "skillEval"))
                       (handler-case
@@ -55,26 +90,36 @@
                               (decode (field response "output")) (field response "output"))
                         (error () nil))))
          (usage (field sample "usage"))
+         (tokens (cond ((numberp (field usage "total_tokens"))
+                        (field usage "total_tokens"))
+                       ((and (numberp (field usage "input_tokens"))
+                             (numberp (field usage "output_tokens")))
+                        (+ (field usage "input_tokens") (field usage "output_tokens")))
+                       ((not (hash-table-p usage))
+                        (or (present (field response "tokenUsage" "total")) :null))
+                       (t :null)))
+         (cached-tokens (if (numberp (field usage "cached_input_tokens"))
+                            (field usage "cached_input_tokens") :null))
          (infra (present (field sample "infrastructureError")))
          (provider-error (present (field response "error"))))
-    (dict "case" (or (field result "testCase" "vars" "id") (field result "vars" "id") :null)
-          "variant" (or (field sample "variant") (field result "provider" "label")
-                        (field result "provider" "id") :null)
+    (multiple-value-bind (agent variant) (row-agent-variant result sample)
+      (dict "case" (or (field result "testCase" "vars" "id") (field result "vars" "id") :null)
+          "agent" agent
+          "profile" (or (present (field sample "profile"))
+                        (present (field profiles agent)) :null)
+          "variant" variant
           "pass" (bool (true-p (field result "success")))
           "score" (or (field result "score") :null)
           "error" (if (or infra (eql 2 (field result "failureReason")) provider-error)
                       (or infra (present (field result "error")) provider-error
                           "Provider/grader error") :null)
           "reason" (or (field result "gradingResult" "reason") :null)
-          "tokens" (if (hash-table-p usage)
-                       (+ (or (field usage "input_tokens") 0)
-                          (or (field usage "output_tokens") 0))
-                       (or (field response "tokenUsage" "total") :null))
-          "cachedInputTokens" (or (field usage "cached_input_tokens") 0)
+          "tokens" tokens
+          "cachedInputTokens" cached-tokens
           "durationMs" (or (present (field sample "durationMs")) (field result "latencyMs") :null)
           "commands" (or (field sample "commandCount") :null)
           "skillRead" (or (field sample "skillRead") :null)
-          "trace" (or (field sample "trace") :null))))
+          "trace" (or (field sample "trace") :null)))))
 
 (-> error-p (hash-table)
     boolean)
@@ -99,41 +144,54 @@
   "Build a summary from either supported Promptfoo export shape."
   (let* ((body (field exported "results"))
          (raw (sequence-list (if (hash-table-p body) (field body "results") body)))
-         (rows (mapcar #'result-row raw))
+         (profiles (or (field manifest "profiles") (dict)))
+         (rows (mapcar (lambda (result) (result-row result profiles)) raw))
          (cases (sequence-list (field manifest "cases")))
          (variants (sequence-list (field manifest "variants")))
+         (agents (or (sequence-list (field manifest "agents")) (list "codex")))
          (repeat (field manifest "repeat"))
-         (expected (* (length cases) repeat (length variants)))
+         (expected (* (length cases) repeat (length variants) (length agents)))
          (stats (dict))
+         (agent-stats (dict))
          (summary (dict)))
+    (dolist (agent agents)
+      (let ((per-variant (dict)))
+        (dolist (variant variants)
+          (setf (gethash variant per-variant)
+                (variant-statistics
+                 (remove-if-not (lambda (row)
+                                  (and (equal agent (field row "agent"))
+                                       (equal variant (field row "variant")))) rows))))
+        (setf (gethash agent agent-stats) per-variant)))
+    ;; Keep the original variant map as the Codex view for existing consumers.
     (dolist (variant variants)
       (setf (gethash variant stats)
-            (variant-statistics
-             (remove-if-not
-              (lambda (row)
-                (member (field row "variant")
-                        (list variant (concatenate 'string "codex-cli:" variant)) :test #'equal))
-              rows))))
+            (or (and (member "codex" agents :test #'equal)
+                     (field agent-stats "codex" variant))
+                (field agent-stats (first agents) variant)
+                (variant-statistics nil))))
     (dolist (key '("id" "label" "started" "skillHash" "suiteHash" "model" "effort"
                    "group" "cases" "repeat" "tools"))
       (setf (gethash key summary) (field manifest key)))
     (setf (gethash "processStatus" summary) status
           (gethash "processSignal" summary) signal
+          (gethash "agents" summary) (coerce agents 'vector)
+          (gethash "profiles" summary) profiles
           (gethash "expected" summary) expected
           (gethash "observed" summary) (length rows)
           (gethash "coverageComplete" summary)
           (bool (and (plusp expected) (= expected (length rows))
                      (every (lambda (case)
                               (every (lambda (variant)
-                                       (= repeat
-                                          (count-if
-                                           (lambda (row)
-                                             (and (equal case (field row "case"))
-                                                  (member (field row "variant")
-                                                   (list variant
-                                                    (concatenate 'string "codex-cli:" variant))
-                                                   :test #'equal))) rows))) variants)) cases)))
+                                       (every (lambda (agent)
+                                                (= repeat
+                                                   (count-if (lambda (row)
+                                                               (and (equal case (field row "case"))
+                                                                    (equal variant (field row "variant"))
+                                                                    (equal agent (field row "agent"))))
+                                                             rows))) agents)) variants)) cases)))
           (gethash "variants" summary) stats
+          (gethash "agentVariants" summary) agent-stats
           (gethash "rows" summary) (coerce rows 'vector)
           (gethash "costUsd" summary) :null)
     summary))
@@ -152,57 +210,171 @@
 (defun print-summary (summary)
   "Print scores and failures with artifact location."
   (format t "~%~A (~A)~%" (field summary "id") (field summary "label"))
-  (maphash (lambda (variant stats)
-             (format t "~A: ~D/~D passed; ~D assertion failures; ~D infrastructure errors~%"
-                     variant (field stats "passed") (field stats "total")
-                     (field stats "failed") (field stats "errors")))
-           (field summary "variants"))
+  (if (hash-table-p (field summary "agentVariants"))
+      (maphash (lambda (agent variants)
+                 (maphash (lambda (variant stats)
+                            (format t "~A:~A: ~D/~D passed; ~D assertion failures; ~D infrastructure errors~%"
+                                    agent variant (field stats "passed") (field stats "total")
+                                    (field stats "failed") (field stats "errors")))
+                          variants))
+               (field summary "agentVariants"))
+      (maphash (lambda (variant stats)
+                 (format t "~A: ~D/~D passed; ~D assertion failures; ~D infrastructure errors~%"
+                         variant (field stats "passed") (field stats "total")
+                         (field stats "failed") (field stats "errors")))
+               (field summary "variants")))
   (unless (true-p (field summary "coverageComplete"))
     (format t "INCOMPLETE COVERAGE: ~D/~D~%" (field summary "observed") (field summary "expected")))
   (loop for row across (field summary "rows") unless (true-p (field row "pass")) do
-    (format t "~A [~A]: ~A~%" (field row "case") (field row "variant")
+    (format t "~A [~A]: ~A~%" (field row "case")
+            (if (> (length (sequence-list (field summary "agents"))) 1)
+                (format nil "~A:~A" (field row "agent") (field row "variant"))
+                (field row "variant"))
             (if (error-p row) (field row "error") (field row "reason"))))
   (format t "Artifacts: ~A~%" (at (root) (format nil ".evals/runs/~A/" (field summary "id")))))
 
-(-> print-history ()
-    t)
-(defun print-history ()
-  "List all accumulated runs, preserving access to deeper history."
-  (dolist (run (histories))
-    (format t "~A  ~A  ~A  ~D/~D passed; coverage ~D/~D~%"
-            (field run "id") (field run "label") (field run "model")
-            (count-if (lambda (row) (true-p (field row "pass")))
-                      (sequence-list (field run "rows")))
-            (length (field run "rows")) (field run "observed") (field run "expected"))))
-
-(-> case-ratio (hash-table string string)
+(-> summary-row-agent-variant-agent (hash-table)
     string)
-(defun case-ratio (run case variant)
-  (let ((rows (remove-if-not (lambda (row) (and (equal case (field row "case"))
-                                               (equal variant (field row "variant"))))
+(defun summary-row-agent-variant-agent (row)
+  (nth-value 0 (summary-row-agent-variant row)))
+
+(-> run-agents (hash-table)
+    list)
+(defun run-agents (run)
+  "Return configured or observed agents, defaulting legacy runs to Codex."
+  (let* ((profiles (field run "profiles"))
+         (profile-agents (when (hash-table-p profiles)
+                           (loop for agent being the hash-keys of profiles collect agent)))
+         (row-agents (mapcar #'summary-row-agent-variant-agent
+                             (sequence-list (field run "rows"))))
+         (agents (remove-duplicates
+                  (append (sequence-list (field run "agents")) profile-agents row-agents)
+                  :test #'equal :from-end t)))
+    (or agents (list "codex"))))
+
+(-> run-has-agent-p (hash-table string)
+    boolean)
+(defun run-has-agent-p (run agent)
+  (not (null (member agent (run-agents run) :test #'equal))))
+
+(-> print-history-runs (list t)
+    t)
+(defun print-history-runs (runs agent)
+  (when (and agent (not (member agent '("codex" "opencode") :test #'equal)))
+    (error "Unknown agent ~A; supported agents are codex and opencode" agent))
+  (dolist (run runs)
+    (when (or (null agent) (run-has-agent-p run agent))
+      (let* ((rows (remove-if-not (lambda (row)
+                                    (or (null agent)
+                                        (equal agent (summary-row-agent-variant-agent row))))
+                                  (sequence-list (field run "rows"))))
+             (model (if agent
+                        (or (field run "profiles" agent "model")
+                            (field run "model") "unknown")
+                        (field run "model")))
+             (expected (if agent
+                           (floor (field run "expected")
+                                  (max 1 (length (sequence-list (field run "agents")))))
+                           (field run "expected"))))
+        (format t "~A  ~A  ~A  ~D/~D passed; coverage ~D/~D [~A]~%"
+                (field run "id") (field run "label") model
+                (count-if (lambda (row) (true-p (field row "pass"))) rows)
+                (length rows) (length rows) expected (or agent "all"))))))
+
+(-> print-history (&key (:agent t))
+    t)
+(defun print-history (&key agent)
+  "List accumulated runs, optionally counting rows for AGENT only."
+  (print-history-runs (histories) agent))
+
+(-> case-ratio (hash-table string string string)
+    string)
+(defun case-ratio (run case variant agent)
+  (let ((rows (remove-if-not (lambda (row)
+                               (multiple-value-bind (row-agent row-variant)
+                                   (summary-row-agent-variant row)
+                                 (and (equal case (field row "case"))
+                                      (equal variant row-variant)
+                                      (equal agent row-agent))))
                              (sequence-list (field run "rows")))))
     (format nil "~D/~D" (count-if (lambda (row) (true-p (field row "pass"))) rows) (length rows))))
 
-(-> compare-runs (t t &key (:allow-mismatch t))
+(-> compare-runs (t t &key (:allow-mismatch t) (:agent t)
+                    (:before-agent t) (:after-agent t))
     t)
-(defun compare-runs (before after &key allow-mismatch)
-  "Compare compatible runs, or explicitly print mismatched settings."
+(defun compare-runs (before after &key allow-mismatch agent before-agent after-agent)
+  "Compare runs for AGENT, or select each side with BEFORE-AGENT and AFTER-AGENT.
+Different agent selectors produce an agent/model comparison, not a skill regression.
+ALLOW-MISMATCH prints suite or same-agent profile differences instead of rejecting them."
   (unless (and before after) (error "Need two existing runs: ~A" (list before after)))
-  (let ((mismatches (remove-if (lambda (key) (json-equal-p (field before key) (field after key)))
-                              '("suiteHash" "model" "effort" "group" "cases" "repeat" "tools"))))
+  (unless (or agent before-agent after-agent)
+    (let ((common-agents (intersection (run-agents before) (run-agents after) :test #'equal)))
+      (unless common-agents
+        (error "Runs ~A and ~A have no common agent; select each side explicitly"
+               (field before "id") (field after "id")))
+      (dolist (common-agent common-agents)
+        (compare-runs before after :agent common-agent :allow-mismatch allow-mismatch))
+      (return-from compare-runs nil)))
+  (let* ((before-agent (or before-agent agent "codex"))
+         (after-agent (or after-agent agent "codex"))
+         (cross-agent (not (equal before-agent after-agent)))
+         (before-profile (field before "profiles" before-agent))
+         (after-profile (field after "profiles" after-agent))
+         (ignored-profile-keys '("model" "effort" "tools" "mode" "timeout" "settings"
+                                 "evaluationTimeoutMs" "executionTimeoutMs"))
+         (mismatches (remove-if (lambda (key)
+                                  (or (and cross-agent
+                                           (member key ignored-profile-keys :test #'equal))
+                                      (json-equal-p
+                                      (if (member key ignored-profile-keys :test #'equal)
+                                          (or (field before-profile key) (field before key))
+                                          (field before key))
+                                      (if (member key ignored-profile-keys :test #'equal)
+                                          (or (field after-profile key) (field after key))
+                                          (field after key)))))
+                                '("suiteHash" "model" "effort" "group" "cases" "repeat"
+                                  "tools" "mode" "timeout" "settings"
+                                  "evaluationTimeoutMs" "executionTimeoutMs"))))
+    (unless (run-has-agent-p before before-agent)
+      (error "Run ~A has no results or profile for agent ~A"
+             (field before "id") before-agent))
+    (unless (run-has-agent-p after after-agent)
+      (error "Run ~A has no results or profile for agent ~A"
+             (field after "id") after-agent))
+    (when (and cross-agent
+               (not (json-equal-p (field before "skillHash") (field after "skillHash"))))
+      (error "Cross-agent comparison requires the same skill: ~A vs ~A"
+             (field before "skillHash") (field after "skillHash")))
+    (when cross-agent
+      (format t "AGENT/MODEL COMPARISON: ~A (~A) -> ~A (~A); results are not skill regressions.~%"
+              before-agent (or (field before-profile "model") (field before "model") "unknown")
+              after-agent (or (field after-profile "model") (field after "model") "unknown")))
     (when (and mismatches (not allow-mismatch))
       (error "Not directly comparable: ~{~A~^, ~}. Use --allow-mismatch explicitly." mismatches))
     (when mismatches (format t "CAUTION: differing ~{~A~^, ~}~%" mismatches))
     (format t "~A -> ~A~%" (field before "id") (field after "id"))
-    (dolist (run (list before after))
-      (format t "~A: ~A~%" (field run "label")
-              (40ants-ai-evals/src/util:encode (field run "variants"))))
+    (loop for run in (list before after)
+          for selected in (list before-agent after-agent) do
+      (format t "~A [~A]: ~A~%" (field run "label") selected
+              (40ants-ai-evals/src/util:encode
+               (or (field run "agentVariants" selected) (field run "variants")))))
     (let ((seen (make-hash-table :test 'equal)))
-      (dolist (row (append (sequence-list (field before "rows"))
-                          (sequence-list (field after "rows"))))
-        (let* ((case (field row "case")) (variant (field row "variant"))
-               (key (list case variant)))
+      (dolist (row (append (remove-if-not (lambda (row)
+                                            (equal before-agent
+                                                   (summary-row-agent-variant-agent row)))
+                                          (sequence-list (field before "rows")))
+                          (remove-if-not (lambda (row)
+                                           (equal after-agent
+                                                  (summary-row-agent-variant-agent row)))
+                                         (sequence-list (field after "rows")))))
+        (multiple-value-bind (row-agent variant) (summary-row-agent-variant row)
+          (let* ((case (field row "case"))
+                 (key (list case variant)))
           (unless (gethash key seen)
             (setf (gethash key seen) t)
-            (format t "~A [~A]: ~A -> ~A~%" case variant
-                    (case-ratio before case variant) (case-ratio after case variant))))))))
+            (format t "~A [~A]: ~A -> ~A~%" case
+                    (if cross-agent
+                        (format nil "~A->~A:~A" before-agent after-agent variant)
+                        (format nil "~A:~A" row-agent variant))
+                    (case-ratio before case variant before-agent)
+                    (case-ratio after case variant after-agent)))))))))

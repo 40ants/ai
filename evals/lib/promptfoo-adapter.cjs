@@ -71,7 +71,7 @@ module.exports = async function lispAssertion(output, context) {
   } catch (error) {
     response.metadata.skillEval = {
       ...response.metadata.skillEval,
-      variant: context.provider.label, infrastructureError: error.message,
+      providerLabel: context.provider.label, infrastructureError: error.message,
     };
     throw error;
   }

@@ -72,8 +72,9 @@ let
   '';
   evalTools = [ toolchain pkgs.nodejs_22 sbcl pkgs.roswell qlot pkgs.curl pkgs.openssl pkgs.git pkgs.ripgrep apm
     pkgs.bashInteractive pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.gnused
-    pkgs.gnutar pkgs.which ];
+    pkgs.gnutar pkgs.which pkgs.opencode ];
 in
+assert pkgs.opencode.version == "2.2.1";
 assert pkgs.stdenv.hostPlatform.system == "aarch64-darwin";
 pkgs.mkShell {
   packages = evalTools;
@@ -94,6 +95,6 @@ pkgs.mkShell {
     export SKILL_EVAL_PROJECT_ROOT="$PWD"
     export SKILL_EVAL_DEPENDENCY_ROOT="$PWD"
     export APM_CACHE_DIR="$PWD/.evals/apm-cache"
-    echo "Eval tools: promptfoo 0.125.1, Codex SDK/CLI 0.156.1, APM 0.31.0, Roswell ${pkgs.roswell.version}, Qlot ${pkgs.sbclPackages.qlot.version} (pinned Nix store)"
+    echo "Eval tools: promptfoo 0.125.1, Codex SDK/CLI 0.156.1, OpenCode 2.2.1, APM 0.31.0, Roswell ${pkgs.roswell.version}, Qlot ${pkgs.sbclPackages.qlot.version} (pinned Nix store)"
   '';
 }
