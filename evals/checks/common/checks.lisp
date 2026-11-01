@@ -105,17 +105,22 @@
   (dict "check" "files/preserved"
         "params" (dict "fixtures" (dict "$var" "fixtures" "default" (dict))
                        "protected" (dict "$var" "protected" "default" :null)))
-  (dict "check" "files/no-changes" "when" "noChanges"
+  (dict "check" "files/no-changes"
+        "when" "noChanges"
         "params" (dict "fixtures" (dict "$var" "fixtures" "default" (dict))))
   (dict "check" "files/text-contains" "when" "textFile"
         "params" (dict "file" (dict "$var" "textFile")
                        "contains" (dict "$var" "textContains")))
-  (dict "check" "source/target-file" "when" "file"
+  (dict "check" "source/target-file"
+        "when" "file"
         "params" (dict "file" (dict "$var" "file")))
-  (dict "check" "source/scope" "when" "sourceOnly"
+  (dict "check" "source/scope"
+        "when" "sourceOnly"
         "params" (dict "file" (dict "$var" "file")
                        "fixtures" (dict "$var" "fixtures" "default" (dict))))
-  (dict "check" "source/no-tabs" "when" "file"
+  (dict "check" "source/no-tabs"
+        "when" "file"
         "params" (dict "file" (dict "$var" "file")))
-  (dict "check" "source/max-line-length" "when" "file"
+  (dict "check" "source/max-line-length"
+        "when" "file"
         "params" (dict "file" (dict "$var" "file")))))
