@@ -60,10 +60,19 @@ EFFORT is a Codex setting and is never translated into an OpenCode reasoning opt
           (values (if (equal agent "codex-cli") "codex" agent) (subseq label (1+ separator))))
         (values "codex" label))))
 
-(-> render-task (string string)
+(-> render-task (string string &optional string)
     string)
-(defun render-task (task agent)
-  "Adapt explicit native skill references while leaving the requested task intact."
-  (if (equal agent "opencode")
-      (cl-ppcre:regex-replace-all "\\$writing-common-lisp" task "writing-common-lisp skill")
-      task))
+(defun render-task (task agent &optional (skill-name "writing-common-lisp"))
+  "Render explicit references so new suites have observable skill-read evidence.
+Codex expands dollar references before SDK tool traces, which cannot prove a read.
+Automatic routing tasks remain untouched, as does the original suite contract."
+  (cond
+    ((equal agent "opencode")
+     (cl-ppcre:regex-replace-all (concatenate 'string "\\$" skill-name) task
+                                (concatenate 'string skill-name " skill")))
+    ((and (equal agent "codex") (not (equal skill-name "writing-common-lisp"))
+          (search (concatenate 'string "$" skill-name) task))
+     (cl-ppcre:regex-replace-all
+      (concatenate 'string "\\$" skill-name) task
+      (format nil "~A skill (first read .agents/skills/~A/SKILL.md)" skill-name skill-name)))
+    (t task)))

@@ -1,0 +1,274 @@
+[
+  {
+    "description": "smoke: Use $logging-with-log4cl",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $logging-with-log4cl. Implement REPORT-PATH(path) in src/logger.lisp to log an info message containing the path literally. Input may contain tildes; keep diagnostics redirectable.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/logger.lisp": "(uiop:define-package #:demo/src/logger\n  (:use #:cl)\n  (:export #:report-path #:report-count #:report-error)\n)\n(in-package #:demo/src/logger)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/logger.lisp"
+            ],
+            "systems": [
+              "log4cl"
+            ],
+            "assertions": "(let* ((out (make-string-output-stream))\n(*terminal-io* (make-two-way-stream (make-string-input-stream \"\") out))\n(*debug-io* *terminal-io*))\n(log:config :info :sane :immediate-flush)\n(demo/src/logger:report-path \"~/data/~archive/a\")\n(finish-output *terminal-io*)\n(assert (search \"~/data/~archive/a\" (get-output-stream-string out))))\n(assert (not (some (lambda (node) (and (op-p node \"format\") (eq (second node) t)))\n                  (nodes (forms \"src/logger.lisp\")))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "formatted-count: Use $logging-with-log4cl",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "formatted-count",
+      "group": "development",
+      "task": "Use $logging-with-log4cl. Implement REPORT-COUNT(count,elapsed) in src/logger.lisp logging info text \"Processed N rows in M ms\" with the provided values.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/logger.lisp": "(uiop:define-package #:demo/src/logger\n  (:use #:cl)\n  (:export #:report-path #:report-count #:report-error)\n)\n(in-package #:demo/src/logger)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "formatted-count"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/logger.lisp"
+            ],
+            "systems": [
+              "log4cl"
+            ],
+            "assertions": "(let* ((out (make-string-output-stream))\n(*terminal-io* (make-two-way-stream (make-string-input-stream \"\") out))\n(*debug-io* *terminal-io*))\n(log:config :info :sane :immediate-flush)\n(demo/src/logger:report-count 17 23)\n(finish-output *terminal-io*)\n(assert (search \"Processed 17 rows in 23 ms\" (get-output-stream-string out))))\n(assert (not (some (lambda (node) (and (op-p node \"format\") (eq (second node) t)))\n                  (nodes (forms \"src/logger.lisp\")))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "package-inference: Use $logging-with-log4cl",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "package-inference",
+      "group": "development",
+      "task": "Use $logging-with-log4cl. Add REPORT-PATH(path) logging the literal path to package-inferred demo/src/logger and wire its dependency so loading system demo in a fresh image works without preloading LOG. Keep log: prefix.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/logger.lisp": "(uiop:define-package #:demo/src/logger\n  (:use #:cl)\n  (:export #:report-path #:report-count #:report-error)\n)\n(in-package #:demo/src/logger)\n\n",
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/logger\"))\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "package-inference"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [],
+            "assertions": "(asdf:load-asd \"demo.asd\") (asdf:load-system \"demo\")\n(let* ((out (make-string-output-stream))\n(*terminal-io* (make-two-way-stream (make-string-input-stream \"\") out))\n(*debug-io* *terminal-io*))\n(log:config :info :sane :immediate-flush)\n(demo/src/logger:report-path \"~/new/~dir\")\n(finish-output *terminal-io*)\n(assert (search \"~/new/~dir\" (get-output-stream-string out))))\n(assert (not (some (lambda (node) (and (op-p node \"format\") (eq (second node) t)))\n                  (nodes (forms \"src/logger.lisp\")))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-error-value: Use $logging-with-log4cl",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "heldout-error-value",
+      "group": "holdout",
+      "task": "Use $logging-with-log4cl. Implement REPORT-ERROR(value) in src/logger.lisp. Log an error containing the complete dynamic value, including literal format directives. Do not treat input as a format control.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/logger.lisp": "(uiop:define-package #:demo/src/logger\n  (:use #:cl)\n  (:export #:report-path #:report-count #:report-error)\n)\n(in-package #:demo/src/logger)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "heldout-error-value"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/logger.lisp"
+            ],
+            "systems": [
+              "log4cl"
+            ],
+            "assertions": "(let* ((out (make-string-output-stream))\n(*terminal-io* (make-two-way-stream (make-string-input-stream \"\") out))\n(*debug-io* *terminal-io*))\n(log:config :info :sane :immediate-flush)\n(demo/src/logger:report-error \"failure ~A ~% ~~\")\n(finish-output *terminal-io*)\n(assert (search \"failure ~A ~% ~~\" (get-output-stream-string out))))\n(assert (not (some (lambda (node) (and (op-p node \"format\") (eq (second node) t)))\n                  (nodes (forms \"src/logger.lisp\")))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: In this Common Lisp log4cl project implement REPORT-PATH(path) in src/logger",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "automatic",
+      "group": "development",
+      "task": "In this Common Lisp log4cl project implement REPORT-PATH(path) in src/logger.lisp. It must emit an info message with the path literally, including tildes, through the project logger.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/logger.lisp": "(uiop:define-package #:demo/src/logger\n  (:use #:cl)\n  (:export #:report-path #:report-count #:report-error)\n)\n(in-package #:demo/src/logger)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/logger.lisp"
+            ],
+            "systems": [
+              "log4cl"
+            ],
+            "assertions": "(let* ((out (make-string-output-stream))\n(*terminal-io* (make-two-way-stream (make-string-input-stream \"\") out))\n(*debug-io* *terminal-io*))\n(log:config :info :sane :immediate-flush)\n(demo/src/logger:report-path \"~/data/~archive/a\")\n(finish-output *terminal-io*)\n(assert (search \"~/data/~archive/a\" (get-output-stream-string out))))\n(assert (not (some (lambda (node) (and (op-p node \"format\") (eq (second node) t)))\n                  (nodes (forms \"src/logger.lisp\")))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "fixtures": {},
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

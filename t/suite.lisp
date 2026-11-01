@@ -7,7 +7,12 @@
   (:import-from #:uiop #:string-prefix-p)
   (:import-from #:40ants-ai-evals/util #:field)
   (:import-from #:40ants-ai-evals/checks #:load-check-systems)
+  (:import-from #:40ants-ai-evals/suites #:catalog)
   (:import-from #:40ants-ai-evals/runner #:grading-vars)
+  (:import-from #:40ants-ai-evals-tests/recovery-test)
+  (:import-from #:40ants-ai-evals-tests/suites-test)
+  (:import-from #:40ants-ai-evals-tests/skill-behavior-test)
+  (:import-from #:40ants-ai-evals-tests/environments-test)
   (:import-from #:40ants-ai-evals-tests/agents-test)
   (:import-from #:40ants-ai-evals-tests/asdf-migration-test)
   (:import-from #:40ants-ai-evals-tests/checks-test)
@@ -22,8 +27,9 @@
     boolean)
 (defun run-tests (system)
   "Load configured check extensions before Rove runs the inferred test modules."
-  (let ((vars (grading-vars (dict))))
-    (load-check-systems (field vars "checkSystems")))
+  (dolist (suite (catalog))
+    (let ((vars (grading-vars (dict "suite" (field suite "id")))))
+      (load-check-systems (field vars "checkSystems"))))
   (let ((test-systems
           (remove-if-not
            (lambda (dependency)

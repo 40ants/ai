@@ -2,7 +2,10 @@
 (uiop:define-package #:40ants-ai-evals/providers/opencode
   (:use #:cl)
   (:import-from #:cl-ppcre)
+  (:import-from #:quri #:url-encode)
   (:import-from #:dexador)
+  (:import-from #:40ants-ai-evals/environments)
+  (:import-from #:40ants-ai-evals/recovery)
   (:import-from #:serapeum #:dict #:->)
   (:import-from #:40ants-ai-evals/util
                 #:field #:at #:encode #:decode #:read-json #:write-json #:write-text
@@ -44,7 +47,9 @@ The hook must return an already decoded JSON value, or text when RAW-P is true."
   (append
    (loop for name in '("PATH" "SHELL" "LANG" "LC_ALL" "TMPDIR" "SSL_CERT_FILE"
                         "SSL_CERT_DIR" "NIX_SSL_CERT_FILE" "HTTP_PROXY" "HTTPS_PROXY"
-                        "ALL_PROXY" "NO_PROXY" "SKILL_EVAL_DEPENDENCY_ROOT")
+                        "ALL_PROXY" "NO_PROXY" "SKILL_EVAL_DEPENDENCY_ROOT"
+                        "SKILL_EVAL_TOOL_PATH" "SKILL_EVAL_SHELL"
+                        "PLAYWRIGHT_BROWSER_PATH" "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" "SKILL_EVAL_PYTHON" "SKILL_EVAL_CHROMIUM_REVISION" "SKILL_EVAL_CHROMIUM_VERSION" "SKILL_EVAL_PLAYWRIGHT_VERSION" "SKILL_EVAL_ENVIRONMENT_NIXPKGS" "SKILL_EVAL_NIXPKGS_PATH" "NIX_PATH" "NIX_SSL_CERT_FILE" "SSL_CERT_FILE")
          for value = (uiop:getenv name)
          when value collect (format nil "~A=~A" name value))
    (list (format nil "OPENCODE_TEST_HOME=~A" (at state "home/"))
@@ -151,30 +156,44 @@ The serializable descriptor references private temporary state; STOP-SERVER eras
       (setf (gethash "variant" result) (subseq model (1+ hash))))
     result))
 
+(-> tool-result (hash-table)
+    t)
+(defun tool-result (state)
+  "Normalize v2 native content blocks, retaining v1-style output compatibility."
+  (let ((content (sequence-list (field state "content"))))
+    (if content
+        (format nil "~{~A~^~%~}"
+                (loop for part in content when (equal "text" (field part "type"))
+                        collect (or (field part "text") "")))
+        (or (field state "output") (field state "error")))))
+
 (-> successful-tool-p (hash-table)
     boolean)
 (defun successful-tool-p (part)
-  (equal "completed" (field part "state" "status")))
+  (let ((exit (field part "state" "metadata" "exit")))
+    (and (equal "completed" (field part "state" "status"))
+         (or (not (numberp exit)) (zerop exit))
+         (not (true-p (field part "state" "output" "isError"))))))
 
-(-> skill-call-p (t t t)
+(-> skill-call-p (t t t &optional string)
     boolean)
-(defun skill-call-p (name input metadata)
+(defun skill-call-p (name input metadata &optional (skill-name "writing-common-lisp"))
   (or (and (equal "skill" name)
-           (or (equal "writing-common-lisp" (field input "id"))
-               (equal "writing-common-lisp" (field metadata "name"))))
+           (or (equal skill-name (field input "id"))
+               (equal skill-name (field metadata "name"))))
       (and (equal "read" name)
            (let ((path (or (field input "filePath") (field input "path"))))
              (and (stringp path)
-                  (search "/writing-common-lisp/SKILL.md" path :from-end t))))))
+                  (search (format nil "/~A/SKILL.md" skill-name) path :from-end t))))))
 
-(-> normalize-transcript (t)
+(-> normalize-transcript (t &optional string)
     hash-table)
-(defun normalize-transcript (transcript)
+(defun normalize-transcript (transcript &optional (skill-name "writing-common-lisp"))
   "Normalize complete v2 export data, deduplicating message and tool identifiers.
 Token counts include compaction calls; only completed target skill reads count."
   (let ((input 0) (output 0) (reasoning 0) (cached 0) (written 0)
         (usage-seen nil) (usage-complete t) (assistant-count 0)
-        (skill nil) (commands 0) (texts nil) (errors nil)
+        (skill nil) (commands 0) (texts nil) (errors nil) (calls nil)
         (messages (make-hash-table :test 'equal)) (tools (make-hash-table :test 'equal)))
     (dolist (message (sequence-list (field transcript "messages")))
       (let ((id (field message "id")))
@@ -205,10 +224,15 @@ Token counts include compaction calls; only completed target skill reads count."
                  (let ((tool-id (field part "id")))
                    (unless (and tool-id (gethash tool-id tools))
                      (when tool-id (setf (gethash tool-id tools) t))
+                     (when (member (field part "state" "status") '("completed" "error") :test #'equal)
+                       (push (dict "id" tool-id "name" (field part "name")
+                                   "arguments" (field part "state" "input")
+                                   "result" (tool-result (field part "state"))
+                                   "success" (bool (successful-tool-p part))) calls))
                      (when (and (successful-tool-p part)
                                 (skill-call-p (field part "name")
                                               (field part "state" "input")
-                                              (field part "state" "metadata")))
+                                              (field part "state" "metadata") skill-name))
                        (setf skill t))
                      (when (and (member (field part "name") '("shell" "bash") :test #'equal)
                                 (member (field part "state" "status")
@@ -221,12 +245,21 @@ Token counts include compaction calls; only completed target skill reads count."
                                 (name (when (stringp qualified)
                                         (subseq qualified (1+ (or (position #\. qualified
                                                                            :from-end t) -1))))))
+                           (when (member (field call "status") '("completed" "error") :test #'equal)
+                             (push (dict "id" (field call "id") "name" name
+                                         "arguments" (field call "input")
+                                         "result" (tool-result call)
+                                         "success" (bool (and (equal "completed" (field call "status"))
+                                                              (let ((exit (or (field call "metadata" "exit")
+                                                                              (field call "output" "metadata" "exit"))))
+                                                                (or (not (numberp exit)) (zerop exit)))
+                                                              (not (true-p (field call "output" "isError")))))) calls))
                            (when (and (member name '("shell" "bash") :test #'equal)
                                       (member (field call "status") '("completed" "error")
                                               :test #'equal))
                              (incf commands))
                            (when (and (equal "completed" (field call "status"))
-                                      (skill-call-p name (field call "input") nil))
+                                      (skill-call-p name (field call "input") nil skill-name))
                              (setf skill t))))))))))))))
     ;; Session totals also include durable usage outside assistant messages.
     (let ((tokens (field transcript "info" "tokens")))
@@ -242,7 +275,7 @@ Token counts include compaction calls; only completed target skill reads count."
                 reasoning (field tokens "reasoning") cached (field tokens "cache" "read")
                 written (field tokens "cache" "write")))))
     (dict "output" (format nil "~{~A~^~%~}" (nreverse texts))
-          "assistantCount" assistant-count
+          "assistantCount" assistant-count "toolCalls" (coerce (nreverse calls) 'vector)
           "skillRead" (bool skill) "commandCount" (when transcript commands)
           "errors" (coerce (nreverse errors) 'vector)
           "usage" (when (and usage-seen usage-complete)
@@ -279,6 +312,33 @@ Token counts include compaction calls; only completed target skill reads count."
           (setf (gethash (concatenate 'string (car entry) "Unavailable") trace) t)))))
   (write-json trace-path trace))
 
+(-> await-fixture-mcp (hash-table pathname)
+    hash-table)
+(defun await-fixture-mcp (server workspace)
+  "Wait for asynchronous project tool discovery before spending model tokens."
+  (let* ((query (concatenate 'string "?location%5Bdirectory%5D="
+                              (url-encode (namestring workspace))))
+         (connected nil))
+    (sb-ext:with-timeout 45
+      (loop repeat 40
+            for state = (request-http server :get (concatenate 'string "/api/mcp" query) nil 5 nil)
+            for fixture = (find "eval_fixture" (sequence-list (field state "data"))
+                                :key (lambda (entry) (field entry "name")) :test #'equal)
+            do (when fixture
+                 (unless (equal "connected" (field fixture "status" "status"))
+                   (request-http server :post
+                                 (concatenate 'string "/api/experimental/mcp/eval_fixture/connect" query)
+                                 nil 15 nil))
+                 (setf state (request-http server :get (concatenate 'string "/api/mcp" query) nil 5 nil)
+                       fixture (find "eval_fixture" (sequence-list (field state "data"))
+                                     :key (lambda (entry) (field entry "name")) :test #'equal))
+                 (when (equal "connected" (field fixture "status" "status"))
+                   (setf connected state)
+                   (return)))
+               (sleep 0.5)))
+    (unless connected (error "Fixture MCP did not connect before model execution"))
+    connected))
+
 (-> call-agent (hash-table)
     hash-table)
 (defun call-agent (request)
@@ -304,6 +364,11 @@ Timeouts interrupt execution before collecting the projected export and durable 
                ;; Shared server state lives until all assertions and error archives finish.
                (setf workspace (workspace-for config vars variant
                                               (unless owned (field server "stateDir"))))
+               (when (probe-file (at workspace ".eval-fixture.json"))
+                 (let* ((descriptor (read-json (at workspace ".eval-fixture.json")))
+                        (config-extra (40ants-ai-evals/environments:opencode-config descriptor)))
+                   (when (plusp (hash-table-count config-extra))
+                     (write-json (at workspace "opencode.json") config-extra))))
                (let* ((model (or (field config "profile" "model")
                                  (field config "model") "zai-coding-plan/glm-5.3"))
                       (session
@@ -321,6 +386,8 @@ Timeouts interrupt execution before collecting the projected export and durable 
                        session-id (field session "data" "id"))
                  (unless (stringp session-id)
                    (error "OpenCode create response has no session ID: ~A" (encode session)))
+                 (when (member (field vars "environmentProfile") '("repl" "deploy") :test #'equal)
+                   (setf (gethash "mcpPreflight" trace) (await-fixture-mcp server workspace)))
                  (write-json trace-path trace)
                  (let ((timeout (/ (or (field config "timeout")
                                        (field config "timeoutMs") 600000) 1000.0)))
@@ -343,7 +410,24 @@ Timeouts interrupt execution before collecting the projected export and durable 
       (unwind-protect
            (progn
              (save-evidence server session-id trace trace-path)
-             (setf normalized (normalize-transcript (field trace "export" "data"))))
+             (setf normalized (normalize-transcript (field trace "export" "data")
+                                                     (or (field vars "skillName") "writing-common-lisp")))
+             ;; Persist candidate files even when the outer evaluator discards
+             ;; this provider response after its own deadline.
+             (when (and workspace (probe-file workspace))
+               (let ((capture-vars (make-hash-table :test 'equal)))
+                 (maphash (lambda (key value) (setf (gethash key capture-vars) value)) vars)
+                 (setf (gethash "variant" capture-vars) variant
+                       (gethash "sessionId" normalized) session-id
+                       (gethash "durationMs" normalized)
+                       (round (* 1000 (/ (- (get-internal-real-time) started)
+                                         internal-time-units-per-second))))
+                 (handler-case
+                     (40ants-ai-evals/recovery:capture
+                      workspace sample-dir capture-vars normalized trace-path failure)
+                   (error (condition)
+                     (write-json (at sample-dir "capture-error.json")
+                                 (dict "error" (princ-to-string condition))))))))
         (when owned (stop-server server))))
     (unless (or failure (field trace "export" "data"))
       (setf failure "OpenCode transcript export unavailable"))
@@ -353,10 +437,13 @@ Timeouts interrupt execution before collecting the projected export and durable 
       (setf failure "OpenCode assistant reported a model or execution error"))
     (let* ((usage (field normalized "usage"))
            (metadata
-             (dict "agent" "opencode" "variant" variant "sessionId" session-id
+             (dict "agent" "opencode" "variant" variant
+                   "skillName" (or (field vars "skillName") "writing-common-lisp")
+                   "sessionId" session-id
                    "workingDir" (when workspace (namestring workspace))
                    "tracePath" (namestring trace-path) "skillRead" (field normalized "skillRead")
-                   "commandCount" (field normalized "commandCount") "usage" usage
+                   "commandCount" (field normalized "commandCount")
+                   "toolCalls" (field normalized "toolCalls") "usage" usage
                    "usageScope" "session"
                    "mode" (or (field config "profile" "mode") "build")
                    "durationMs" (round (* 1000 (/ (- (get-internal-real-time) started)

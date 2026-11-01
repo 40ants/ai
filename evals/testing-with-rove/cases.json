@@ -1,0 +1,286 @@
+[
+  {
+    "description": "smoke: Use $testing-with-rove",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $testing-with-rove. Add DEFTEST named POSITIVE-COUNT to tests/core-test.lisp testing src/core.lisp valid positive counts and that zero signals DEMO/SRC/CORE:INVALID-COUNT. Use the correct Rove signals argument order.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:invalid-count #:positive-count)\n)\n(in-package #:demo/src/core)\n(define-condition invalid-count (error) ())\n(defun positive-count (n) (if (plusp n) n (error 'invalid-count)))\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test\n  (:use #:cl)\n  (:import-from #:rove #:deftest #:testing #:ok #:signals)\n)\n(in-package #:demo-tests/core-test)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp",
+              "tests/core-test.lisp"
+            ],
+            "systems": [
+              "rove"
+            ],
+            "assertions": "(assert (rove:run-test 'demo-tests/core-test::positive-count))\n(let ((test (definition \"tests/core-test.lisp\" \"deftest\" \"positive-count\")))\n(assert test)\n(assert (some (lambda (node) (and (op-p node \"signals\")\n                                (consp (second node)))) (nodes test))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "test-op: Use $testing-with-rove",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "test-op",
+      "group": "development",
+      "task": "Use $testing-with-rove. Wire demo.asd test-op to demo-tests, and create demo-tests.asd plus tests/core-test.lisp. The positive-count test covers positive return and zero signaling invalid-count. ASDF:TEST-SYSTEM \"demo\" must execute the Rove suite and fail when assertions fail.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\"))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:invalid-count #:positive-count)\n)\n(in-package #:demo/src/core)\n(define-condition invalid-count (error) ())\n(defun positive-count (n) (if (plusp n) n (error 'invalid-count)))\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test\n  (:use #:cl)\n  (:import-from #:rove #:deftest #:testing #:ok #:signals)\n)\n(in-package #:demo-tests/core-test)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "test-op"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [
+              "rove"
+            ],
+            "assertions": "(asdf:load-asd \"demo.asd\") (asdf:load-asd \"demo-tests.asd\")\n(asdf:load-system \"demo-tests\")\n(let ((old (symbol-function 'demo/src/core:positive-count)) (calls 0))\n  (unwind-protect\n       (progn\n         (setf (symbol-function 'demo/src/core:positive-count)\n               (lambda (n) (incf calls) (funcall old n)))\n         (asdf:test-system \"demo\")\n         (assert (plusp calls))\n         (setf (symbol-function 'demo/src/core:positive-count) (lambda (n) (declare (ignore n)) 99))\n         (assert (handler-case (progn (asdf:test-system \"demo\") nil) (error () t))))\n    (setf (symbol-function 'demo/src/core:positive-count) old)))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "global-restoration: Use $testing-with-rove",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "global-restoration",
+      "group": "development",
+      "task": "Use $testing-with-rove. In tests/core-test.lisp add test GLOBAL-STATE for DEMO/SRC/CORE:WITH-TEMP-COUNTER. Verify temporary mutation and restoration even on an error; the global uses global-vars:define-global-var and must not be LET-bound. Add the helper in src/core.lisp. It takes a value and thunk and restores *COUNTER* with unwind-protect.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:*counter* #:with-temp-counter)\n)\n(in-package #:demo/src/core)\n(global-vars:define-global-var *counter* 41)\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test\n  (:use #:cl)\n  (:import-from #:rove #:deftest #:testing #:ok #:signals)\n)\n(in-package #:demo-tests/core-test)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "global-restoration"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp",
+              "tests/core-test.lisp"
+            ],
+            "systems": [
+              "rove",
+              "global-vars"
+            ],
+            "assertions": "(setf demo/src/core:*counter* 41)\n(assert (= 9 (demo/src/core:with-temp-counter 9 (lambda () demo/src/core:*counter*))))\n(assert (= 41 demo/src/core:*counter*))\n(handler-case (demo/src/core:with-temp-counter 3 (lambda () (error \"expected\"))) (error () nil))\n(assert (= 41 demo/src/core:*counter*))\n(assert (rove:run-test 'demo-tests/core-test::global-state))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-specific-condition: Use $testing-with-rove",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "heldout-specific-condition",
+      "group": "holdout",
+      "task": "Use $testing-with-rove. Add test POSITIVE-COUNT to tests/core-test.lisp. Test positive return, and assert that both zero and -5 signal specifically DEMO/SRC/CORE:INVALID-COUNT. Do not accept an unrelated error as success.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:invalid-count #:positive-count)\n)\n(in-package #:demo/src/core)\n(define-condition invalid-count (error) ())\n(defun positive-count (n) (if (plusp n) n (error 'invalid-count)))\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test\n  (:use #:cl)\n  (:import-from #:rove #:deftest #:testing #:ok #:signals)\n)\n(in-package #:demo-tests/core-test)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "heldout-specific-condition"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp",
+              "tests/core-test.lisp"
+            ],
+            "systems": [
+              "rove"
+            ],
+            "assertions": "(assert (rove:run-test 'demo-tests/core-test::positive-count))\n(let ((test (definition \"tests/core-test.lisp\" \"deftest\" \"positive-count\")))\n(assert test)\n(assert (some (lambda (node) (and (op-p node \"signals\")\n                                (consp (second node)))) (nodes test))))\n(let ((old (symbol-function 'demo/src/core:positive-count)))\n(unwind-protect (progn\n(setf (symbol-function 'demo/src/core:positive-count) (lambda (n) (if (plusp n) n (error \"wrong condition\"))))\n(assert (not (rove:run-test 'demo-tests/core-test::positive-count))))\n(setf (symbol-function 'demo/src/core:positive-count) old)))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: Add a Rove DEFTEST named POSITIVE-COUNT in tests/core-test",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "automatic",
+      "group": "development",
+      "task": "Add a Rove DEFTEST named POSITIVE-COUNT in tests/core-test.lisp testing src/core.lisp valid positive counts and that zero signals the specific INVALID-COUNT condition.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:invalid-count #:positive-count)\n)\n(in-package #:demo/src/core)\n(define-condition invalid-count (error) ())\n(defun positive-count (n) (if (plusp n) n (error 'invalid-count)))\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test\n  (:use #:cl)\n  (:import-from #:rove #:deftest #:testing #:ok #:signals)\n)\n(in-package #:demo-tests/core-test)\n\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp",
+              "tests/core-test.lisp"
+            ],
+            "systems": [
+              "rove"
+            ],
+            "assertions": "(assert (rove:run-test 'demo-tests/core-test::positive-count))\n(let ((test (definition \"tests/core-test.lisp\" \"deftest\" \"positive-count\")))\n(assert test)\n(assert (some (lambda (node) (and (op-p node \"signals\")\n                                (consp (second node)))) (nodes test))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "fixtures": {},
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -6,3 +6,19 @@
  (:class qlot/source/github:source-github
   :initargs (:repos "40ants/40ants-doc-theme-40ants" :ref "5172e5447da6ddf473861f123bb62f6627412bc1" :branch nil :tag nil)
   :version "github-5172e5447da6ddf473861f123bb62f6627412bc1"))
+("mallet" .
+ (:class qlot/source/github:source-github
+  :initargs (:repos "fukamachi/mallet" :ref "553c9092239e8a215dfb88650cc8facd2569be2b" :branch nil :tag nil)
+  :version "github-553c9092239e8a215dfb88650cc8facd2569be2b"))
+("40ants-linter" .
+ (:class qlot/source/github:source-github
+  :initargs (:repos "40ants/linter" :ref "1a1ec50537c2167a61c533b56b252768ec986fd1" :branch nil :tag nil)
+  :version "github-1a1ec50537c2167a61c533b56b252768ec986fd1"))
+("trivial-glob" .
+ (:class qlot/source/github:source-github
+  :initargs (:repos "fukamachi/trivial-glob" :ref "0c2675d9452ed164970f2fc4a0e41784ebee819a" :branch nil :tag nil)
+  :version "github-0c2675d9452ed164970f2fc4a0e41784ebee819a"))
+("sblint" .
+ (:class qlot/source/github:source-github
+  :initargs (:repos "cxxxr/sblint" :ref "1037296f604c3210ce073a53539d4ae95b0c2f8c" :branch nil :tag nil)
+  :version "github-1037296f604c3210ce073a53539d4ae95b0c2f8c"))

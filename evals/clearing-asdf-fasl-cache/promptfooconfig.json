@@ -1,0 +1,61 @@
+{
+  "description": "clearing-asdf-fasl-cache observable behavior (native Codex SDK)",
+  "prompts": [
+    {
+      "id": "with-skill",
+      "label": "with-skill-task",
+      "raw": "{{task}}"
+    }
+  ],
+  "providers": [
+    {
+      "id": "openai:codex-sdk",
+      "label": "with-skill",
+      "prompts": [
+        "with-skill"
+      ],
+      "config": {
+        "model": "gpt-6-sol",
+        "model_reasoning_effort": "medium",
+        "working_dir": "{{workspaceWithSkill}}",
+        "copy_working_dir": "copy",
+        "sandbox_mode": "workspace-write",
+        "approval_policy": "never",
+        "web_search_mode": "disabled",
+        "network_access_enabled": false,
+        "enable_streaming": true,
+        "persist_threads": false
+      }
+    }
+  ],
+  "defaultTest": {
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://../lib/promptfoo-adapter.cjs",
+        "metric": "Contract"
+      }
+    ],
+    "vars": {
+      "checkSystems": [
+        {
+          "system": "40ants-ai-evals-common-checks",
+          "asd": "evals/checks/common/40ants-ai-evals-common-checks.asd"
+        },
+        {
+          "system": "40ants-ai-evals-skill-behavior-checks",
+          "asd": "evals/checks/skill-behavior/40ants-ai-evals-skill-behavior-checks.asd"
+        }
+      ],
+      "checks": [
+        {
+          "profile": "common/contract"
+        }
+      ]
+    }
+  },
+  "evaluateOptions": {
+    "maxConcurrency": 1
+  },
+  "tests": "file://cases.json"
+}

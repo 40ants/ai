@@ -2,6 +2,17 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E3-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.3.0 (2026-11-01)
+
+* Added evaluation suites for the remaining eleven project skills and
+suite selection, independent behavioral checks, and reproducible tool environments.
+* Archived tool calls, binary artifacts, symbolic links, and environment identity.
+* Added suite-aware history comparisons and multi-suite batch indexes.
+* Preserved provider artifacts across evaluator timeouts and exposed prepared
+`MCP` runners with native tool-result evidence.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E2-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.2.0 (2026-11-01)

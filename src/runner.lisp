@@ -6,8 +6,11 @@
   (:import-from #:cl-ppcre)
   (:import-from #:ironclad)
   (:import-from #:yason)
+  (:import-from #:40ants-ai-evals/suites #:find-suite #:selected-suites #:suite-path)
+  (:import-from #:40ants-ai-evals/environments)
   (:import-from #:40ants-ai-evals/checks)
   (:import-from #:40ants-ai-evals/collector)
+  (:import-from #:40ants-ai-evals/recovery)
   (:import-from #:40ants-ai-evals/grading/contracts)
   (:import-from #:40ants-ai-evals/providers/opencode)
   (:import-from #:serapeum #:-> #:dict)
@@ -51,8 +54,9 @@
   (maphash (lambda (key value)
              (declare (ignore value))
              (unless (member key '("ablation" "label" "model" "effort" "repeat" "group"
-                                    "filter" "ref" "skill-dir" "timeout" "agent") :test #'equal)
+                                    "filter" "ref" "skill-dir" "timeout" "agent" "suite") :test #'equal)
                (error "Unknown run option --~A" key))) flags)
+  (selected-suites flags)
   (let ((agents (selected-agents flags)))
     (when (and (> (length agents) 1)
                (or (gethash "model" flags) (gethash "effort" flags)))
@@ -77,8 +81,14 @@
     hash-table)
 (defun grading-vars (vars)
   "Apply this suite's declared check defaults, keeping historical expectations intact."
-  (let ((config (read-json (at (at (root) *suite-path*) "promptfooconfig.json"))))
-    (40ants-ai-evals/checks:merge-vars (field config "defaultTest" "vars") vars)))
+  (let* ((suite (find-suite (field vars "suite")))
+         (path (if (field vars "suite") (suite-path (field vars "suite")) *suite-path*))
+         (config (read-json (at (at (root) path) "promptfooconfig.json")))
+         (result (40ants-ai-evals/checks:merge-vars (field config "defaultTest" "vars") vars)))
+    (setf (gethash "suite" result) (field suite "id")
+          (gethash "skillName" result) (field suite "skillName")
+          (gethash "environmentProfile" result) (field suite "environmentProfile"))
+    result))
 
 (-> validate-extension-paths (hash-table)
     t)
@@ -100,11 +110,22 @@
                  (sequence-list (read-json (at (at (root) *suite-path*) "cases.json"))))))
     (unless cases (error "No matching cases; refusing an empty eval: ~A" pattern))
     (dolist (case cases)
-      (let ((vars (grading-vars (field case "vars"))))
+      (let* ((raw (field case "vars"))
+             (suite (find-suite (gethash "suite" flags)))
+             (vars (progn (setf (gethash "suite" raw) (field suite "id")) (grading-vars raw))))
         (validate-extension-paths vars)
         (40ants-ai-evals/checks:validate-plan vars)
         (setf (gethash "vars" case) vars)))
     cases))
+
+(-> version-line (string)
+    string)
+(defun version-line (output)
+  "Ignore logger diagnostics before a tool's final version line."
+  (or (car (last (remove "" (mapcar (lambda (line)
+                                       (string-trim '(#\Space #\Tab #\Return) line))
+                                     (uiop:split-string output :separator '(#\Newline)))
+                          :test #'equal))) ""))
 
 (-> tool-versions (&optional list)
     hash-table)
@@ -115,7 +136,9 @@
     (dolist (tool (append '("promptfoo" "apm" "sbcl" "node")
                          (when (member "codex" agents :test #'equal) '("codex"))
                          (when (member "opencode" agents :test #'equal) '("opencode"))))
-      (setf (gethash tool tools) (execute (list tool "--version"))))
+      (setf (gethash tool tools)
+            (let ((output (execute (list tool "--version"))))
+              (if (equal tool "promptfoo") (version-line output) output))))
     (multiple-value-bind (out err) (run-command '("ros" "--version"))
       (setf (gethash "ros" tools)
             (string-trim '(#\Space #\Tab #\Return #\Newline) (concatenate 'string out err))))
@@ -183,11 +206,12 @@
         (error "Invalid case ID: ~A" id))
       (setf (gethash "taskWithoutSkill" vars)
             (cl-ppcre:regex-replace-all
-             "Use \\$writing-common-lisp(?: and follow this project's conventions)?\\.\\s*"
+             (format nil "Use \\$~A(?: and follow this project's conventions)?\\.\\s*"
+                     (or (field vars "skillName") "writing-common-lisp"))
              (field vars "task") ""))
       (dolist (agent agents)
         (setf (gethash agent workspaces) (dict)
-              (gethash (format nil "task_~A" agent) vars) (render-task (field vars "task") agent))
+              (gethash (format nil "task_~A" agent) vars) (render-task (field vars "task") agent (or (field vars "skillName") "writing-common-lisp")))
         (dolist (variant variants)
           (let ((workspace (at run-dir (format nil "fixtures/~A/~A/~A/" id agent variant))))
             (ensure-directories-exist (at workspace ".keep"))
@@ -198,11 +222,30 @@
                            (error "Invalid fixture path: ~A" relative))
                          (write-text (at workspace relative) content))
                        (field vars "fixtures")))
+            (when (and (field vars "suite")
+                       (not (equal (field vars "suite") "writing-common-lisp"))
+                       (not (field vars "fixtures" "AGENTS.md")))
+              ;; Environment facts only; assertions and skill-specific advice stay
+              ;; out of the prompt. Keep copied samples independent of user projects.
+              (write-text (at workspace "AGENTS.md")
+                          (format nil "# Prepared evaluation workspace~%~%Dependencies and tools are already provisioned by the project Nix shell and Qlot. `sbcl` loads that pinned Qlot distribution automatically; use `(asdf:load-system :name)` or `qlot exec ros` from this directory. Lisp dependency sources are under `$SKILL_EVAL_DEPENDENCY_ROOT/.qlot/`; obtain exact paths with ASDF. Do not search or register personal checkouts, user Quicklisp directories, or the whole filesystem. Do not install dependencies or download browsers. Inspect `.eval-environment.json` for fixture-specific paths. Keep work inside this workspace.~%~%Deployment operations use the fixture MCP simulator exclusively. Do not execute real SSH, scp, sftp, sudo or systemctl. Reverse SSH forwarding is forbidden. Ordinary SSH/scp/sftp outside this simulator would require `-o ClearAllForwardings=yes`.~%"))
+              (when (equal (field vars "environmentProfile") "playwright")
+                (with-open-file (out (at workspace "AGENTS.md") :direction :output :if-exists :append
+                                     :external-format :utf-8)
+                  (format out "~%The prepared fixture MCP provides `run_browser_smoke` for the exact command `./run_smoke_test.sh`. Use that runner when available: it launches the pinned browser outside the agent's restricted subprocess environment, captures its real exit status, and retains screenshots. Generate the wrapper and Python test normally; the runner does not generate or repair them.~%")))
+              (setf (gethash "AGENTS.md" (gethash "fixtures" vars))
+                    (uiop:read-file-string (at workspace "AGENTS.md"))))
             (when (equal variant "with-skill")
               (copy-directory (at run-dir "skill/")
-                              (at workspace (if (equal agent "codex")
-                                                ".agents/skills/writing-common-lisp/"
-                                                ".opencode/skills/writing-common-lisp/"))))
+                              (at workspace (format nil "~A/skills/~A/"
+                                                    (if (equal agent "codex") ".agents" ".opencode")
+                                                    (or (field vars "skillName") "writing-common-lisp")))))
+            (when (and (field vars "suite")
+                       (not (equal (field vars "suite") "writing-common-lisp")))
+              (let ((descriptor (40ants-ai-evals/environments:prepare workspace vars)))
+                (setf (gethash "fixtureScript" descriptor)
+                      (namestring (at (at run-dir "harness/") "roswell/fixture-mcp.ros")))
+                (write-json (at workspace ".eval-fixture.json") descriptor)))
             (setf (gethash variant (field workspaces agent)) (namestring workspace))
             (when (equal agent "codex")
               (setf (gethash (if (equal variant "with-skill")
@@ -227,9 +270,9 @@
       (visit #P"/etc/codex/skills/"))
     (coerce (nreverse result) 'vector)))
 
-(-> codex-provider (hash-table pathname string)
+(-> codex-provider (hash-table pathname string &optional t)
     hash-table)
-(defun codex-provider (profile auth-dir variant)
+(defun codex-provider (profile auth-dir variant &optional (harness (root)))
   (let* ((template (read-json (at (at (root) *suite-path*) "promptfooconfig.json")))
          (provider (aref (field template "providers") 0))
          (settings (field provider "config"))
@@ -252,6 +295,28 @@
                 "shell_environment_policy.set.ZDOTDIR" (namestring auth-dir)
                 "shell_environment_policy.set.XDG_CACHE_HOME" cache
                 "shell_environment_policy.set.SKILL_EVAL_DEPENDENCY_ROOT" dependency-root))
+    ;; The native SDK deliberately inherits only a minimal process environment.
+    ;; Pass pinned fixture tools explicitly to both the CLI and its shell tools.
+    (dolist (name '("PLAYWRIGHT_BROWSER_PATH" "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
+                    "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" "SKILL_EVAL_PYTHON"
+                    "SKILL_EVAL_CHROMIUM_REVISION" "SKILL_EVAL_CHROMIUM_VERSION"
+                    "SKILL_EVAL_PLAYWRIGHT_VERSION" "SKILL_EVAL_ENVIRONMENT_NIXPKGS"
+                    "SKILL_EVAL_NIXPKGS_PATH" "NIX_PATH" "NIX_SSL_CERT_FILE" "SSL_CERT_FILE"))
+      (let ((value (uiop:getenv name)))
+        (when value
+          (setf (gethash name (gethash "cli_env" settings)) value
+                (gethash (concatenate 'string "shell_environment_policy.set." name)
+                         (gethash "cli_config" settings)) value))))
+    (unless (equal *suite-path* "evals/writing-common-lisp/")
+      (let* ((entry (find-suite
+                     (car (last (pathname-directory (pathname *suite-path*))))))
+             (extra (40ants-ai-evals/environments:codex-config
+                     (dict "profile" (field entry "environmentProfile")
+                           "fixtureScript" (namestring (at harness "roswell/fixture-mcp.ros"))))))
+        (when (equal "playwright" (field entry "environmentProfile"))
+          ;; Browser fixtures include an application served on local loopback.
+          (setf (gethash "network_access_enabled" settings) 'yason:true))
+        (maphash (lambda (key value) (setf (gethash key (gethash "cli_config" settings)) value)) extra)))
     provider))
 
 (-> opencode-execution-timeout (hash-table)
@@ -275,7 +340,7 @@
                       "raw" (if (equal variant "without-skill") "{{taskWithoutSkill}}"
                                 (format nil "{{task_~A}}" agent))) prompts)
           (push (if (equal agent "codex")
-                    (codex-provider (field profiles agent) auth-dir variant)
+                    (codex-provider (field profiles agent) auth-dir variant (at run-dir "harness/"))
                     (dict "id" "file://../lib/opencode-provider.cjs" "label" label
                           "prompts" (vector label)
                           "config" (dict "runDir" (namestring run-dir) "server" server
@@ -290,9 +355,9 @@
     (write-json (at suite "selected-cases.json") (coerce cases 'vector))
     (write-json (at suite "effective.json") config)))
 
-(-> manifest (string t hash-table list list hash-table)
+(-> manifest (string t hash-table list list hash-table &optional hash-table)
     hash-table)
-(defun manifest (id run-dir flags cases variants tools)
+(defun manifest (id run-dir flags cases variants tools &optional environment)
   (let* ((agents (selected-agents flags)) (profiles (dict))
          (single (when (= 1 (length agents)) (profile-for (first agents) flags tools))))
     (dolist (agent agents)
@@ -303,6 +368,20 @@
           (setf (gethash "executionTimeoutMs" profile) (opencode-execution-timeout flags)))
         (setf (gethash agent profiles) profile)))
     (dict "id" id "label" (option flags "label" "unlabelled") "started" (now)
+          "suite" (or (gethash "suite" flags) "writing-common-lisp")
+          "skillName" (field (find-suite (gethash "suite" flags)) "skillName")
+          "environment" (or environment
+                            (40ants-ai-evals/environments:preflight
+                             (field (find-suite (gethash "suite" flags)) "environmentProfile")))
+          "fixturesHash" (ironclad:byte-array-to-hex-string
+                          (ironclad:digest-sequence
+                           :sha256 (babel:string-to-octets
+                                    (encode (map 'vector
+                                                 (lambda (case)
+                                                   (dict "id" (field case "vars" "id")
+                                                         "fixtures" (field case "vars" "fixtures")
+                                                         "scenario" (field case "vars" "scenario"))) cases))
+                                    :encoding :utf-8)))
           "skillSource" (or (gethash "ref" flags) (gethash "skill-dir" flags) "working-tree")
           "skillHash" (digest-tree (at run-dir "skill/"))
           "suiteHash" (digest-tree (at run-dir "harness/"))
@@ -359,12 +438,14 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                               "infrastructureError" (princ-to-string condition))))))))
         (write-json file export)))))
 
-(-> run-eval (hash-table)
+(-> run-single-eval (hash-table)
     integer)
-(defun run-eval (flags)
+(defun run-single-eval (flags)
   "Snapshot a run and evaluate selected agent profiles on the same check plans."
   (validate-options flags)
   (let* ((cases (selected-cases flags)) (agents (selected-agents flags))
+         (environment (40ants-ai-evals/environments:preflight
+                       (field (find-suite (gethash "suite" flags)) "environmentProfile")))
          (tools (tool-versions agents))
          (id (format nil "~A-~A" (substitute #\- #\. (substitute #\- #\: (now)))
                      (subseq (unique-id) 0 6)))
@@ -376,7 +457,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
          (progn
            (ensure-directories-exist (at run-dir ".keep"))
            (let* ((harness (snapshot run-dir flags))
-                  (info (manifest id run-dir flags cases variants tools))
+                  (info (manifest id run-dir flags cases variants tools environment))
                   (auth (at (or (uiop:getenv "CODEX_HOME")
                                  (at (user-homedir-pathname) ".codex/")) "auth.json"))
                   (status 1))
@@ -411,6 +492,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                (error (condition)
                  (write-text (at run-dir "promptfoo.spawn-error.log")
                              (princ-to-string condition))))
+             (40ants-ai-evals/recovery:recover run-dir)
              (archive-provider-errors run-dir)
              (let ((summary (summarize run-dir info status)))
                (print-summary summary)
@@ -426,13 +508,53 @@ Only the local export is enriched; Promptfoo's database is left untouched."
   (let ((hashes (dict)))
     (dolist (dir '("src/" "evals/checks/" "roswell/"))
       (setf (gethash dir hashes) (digest-tree (at (root) dir))))
-    (dolist (file '("docs/changelog.lisp" "qlfile.lock"
-                    "evals/writing-common-lisp/promptfooconfig.json"))
-      (setf (gethash file hashes) (digest-file (at (root) file))))
+    (dolist (file '("docs/changelog.lisp" "qlfile.lock" "evals/suites.json"))
+      (when (probe-file (at (root) file))
+        (setf (gethash file hashes) (digest-file (at (root) file)))))
+    (dolist (entry (40ants-ai-evals/suites:catalog))
+      (let ((file (field entry "config")))
+        (when (probe-file (at (root) file))
+          (setf (gethash file hashes) (digest-file (at (root) file))))))
     (dolist (asd (uiop:directory-files (root) "*.asd"))
       (setf (gethash (file-namestring asd) hashes) (digest-file asd)))
     (ironclad:byte-array-to-hex-string
      (ironclad:digest-sequence :sha256 (babel:string-to-octets (encode hashes) :encoding :utf-8)))))
+
+(-> archive-integrity-error (hash-table pathname)
+    (or null string))
+(defun archive-integrity-error (sample sample-dir)
+  "Check persisted artifact bytes before offline grading, without following links."
+  (let ((artifacts (field sample "artifacts")))
+    (when (hash-table-p artifacts)
+      (block invalid
+        (maphash
+         (lambda (relative metadata)
+           (unless (safe-relative-p relative)
+             (return-from invalid (format nil "Unsafe archived artifact path: ~A" relative)))
+           (unless (equal "symlink" (field metadata "kind"))
+             (let* ((prefix (if (equal "text" (field metadata "kind")) "files/" "artifacts/"))
+                    (path (at sample-dir (concatenate 'string prefix relative))))
+               (unless (probe-file path)
+                 (return-from invalid (format nil "Missing archived artifact: ~A" relative)))
+               (let ((stat (sb-posix:lstat (namestring path))))
+                 (unless (and (sb-posix:s-isreg (sb-posix:stat-mode stat))
+                              (= (sb-posix:stat-size stat) (field metadata "size"))
+                              (equal (digest-file path) (field metadata "sha256")))
+                   (return-from invalid (format nil "Corrupt archived artifact: ~A" relative)))))))
+         artifacts)
+        nil))))
+
+(-> unavailable-native-results-p (hash-table)
+    boolean)
+(defun unavailable-native-results-p (sample)
+  "Detect old successful private MCP calls whose native results were not archived."
+  (not (null
+        (some (lambda (call)
+                (and (true-p (field call "success"))
+                     (member (field call "name")
+                             '("eval_lisp_form" "remote_shell" "run_browser_smoke") :test #'equal)
+                     (or (not (field call "result")) (eq :null (field call "result")))))
+              (sequence-list (field sample "toolCalls"))))))
 
 (-> replay-run (t)
     hash-table)
@@ -442,7 +564,9 @@ Only the local export is enriched; Promptfoo's database is left untouched."
          (info (read-json (at run-dir "manifest.json")))
          (cases (sequence-list
                  (read-json (at (at run-dir "harness/")
-                                "evals/writing-common-lisp/selected-cases.json"))))
+                                (concatenate 'string
+                                             (suite-path (or (field info "suite") "writing-common-lisp"))
+                                             "selected-cases.json")))))
          (report nil))
     (dolist (dir (uiop:subdirectories (at run-dir "samples/")))
       (let* ((sample (read-json (at dir "sample.json")))
@@ -453,11 +577,65 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                                    (format nil "~A-~A-" (field case "vars" "id")
                                            (field sample "variant")) id))) cases)))
         (unless case (error "Cannot map archived sample to a test case: ~A" id))
-        (push (dict "sampleId" id
-                    "grading" (40ants-ai-evals/grading/contracts:grade
-                               sample (grading-vars (field case "vars")))) report)))
+        (setf (gethash "suite" (field case "vars"))
+              (or (field info "suite") "writing-common-lisp"))
+        (let ((integrity (or (archive-integrity-error sample dir)
+                             (when (probe-file (at dir "turn.json"))
+                               (40ants-ai-evals/collector::blocked-mcp-error (read-json (at dir "turn.json"))))
+                             (when (unavailable-native-results-p sample)
+                               "Native MCP results unavailable in archived nested tool calls"))))
+          (push (dict "sampleId" id
+                    "infrastructureError" (or integrity :null)
+                    "missingEvidence" (coerce (remove-if
+                                               (lambda (key) (nth-value 1 (gethash key sample)))
+                                               (append '("toolCalls" "artifacts" "environment")
+                                                       (when (unavailable-native-results-p sample)
+                                                         '("nativeMcpResults")))) 'vector)
+                    "grading" (if integrity
+                                  (dict "pass" 'yason:false "score" 0 "reason" integrity)
+                                  (40ants-ai-evals/grading/contracts:grade
+                                   sample (grading-vars (field case "vars"))))) report))))
     (let ((result (dict "runId" (field info "id") "replayedAt" (now)
                         "graderSuiteHash" (grader-fingerprint)
                         "samples" (coerce (nreverse report) 'vector))))
       (write-json (at run-dir "replay-lisp.json") result)
       result)))
+
+
+(-> run-eval (hash-table)
+    integer)
+(defun run-eval (flags)
+  "Evaluate suites separately; retain a durable index for multi-suite batches."
+  (validate-options flags)
+  (let* ((entries (selected-suites flags))
+         (batch-id (when (> (length entries) 1) (unique-id)))
+         (batch-file (when batch-id (at (root) (format nil ".evals/batches/~A.json" batch-id))))
+         (rows nil) (status 0))
+    ;; Validate every selected case plan before any paid run begins.
+    (dolist (entry entries)
+      (let* ((child (40ants-ai-evals/checks:merge-vars flags (dict "suite" (field entry "id"))))
+             (*skill-path* (field entry "skillPath"))
+             (*suite-path* (suite-path (field entry "id"))))
+        (selected-cases child)))
+    (dolist (entry entries)
+      (let* ((child (40ants-ai-evals/checks:merge-vars flags (dict "suite" (field entry "id"))))
+             (*skill-path* (field entry "skillPath"))
+             (*suite-path* (suite-path (field entry "id")))
+             (before (uiop:subdirectories (at (root) ".evals/runs/")))
+             (code (handler-case (run-single-eval child)
+                     (error (condition)
+                       (format *error-output* "Suite ~A failed: ~A~%" (field entry "id") condition)
+                       2)))
+             (created (set-difference (uiop:subdirectories (at (root) ".evals/runs/")) before
+                                      :test #'equal)))
+        (unless (zerop code) (setf status 1))
+        (push (dict "suite" (field entry "id") "status" code
+                    "runIds" (map 'vector (lambda (dir)
+                                            (car (last (pathname-directory dir)))) created)) rows)
+        (when batch-file
+          (write-json batch-file
+                      (dict "id" batch-id "updatedAt" (now)
+                            "complete" (if (= (length rows) (length entries)) 'yason:true 'yason:false)
+                            "suites" (coerce (reverse rows) 'vector))))))
+    (when batch-file (format t "Batch: ~A~%" batch-file))
+    status))

@@ -61,14 +61,15 @@
                        "(asdf:load-asd #P~S)~%"
                        "(asdf:load-system ~S)~%"
                        "(let ((version (asdf:component-version (asdf:find-system ~S))))~%"
-                       "  (unless (equal version \"0.2.0\")~%"
-                       "    (error \"Check-pack version should be 0.2.0, got ~~S\" version)))~%"
+                       "  (unless (equal version ~S)~%"
+                       "    (error \"Check-pack version differs from the main system: ~~S\" version)))~%"
                        "(format t ~S)~%")
           (namestring project-root)
           (namestring (at project-root ".qlot/setup.lisp"))
           (namestring (at project-root "40ants-ai-evals.asd"))
           (namestring (at project-root asd-path))
-          system system (format nil "CHECK_PACK_LOADED:~A" system)))
+          system system (asdf:component-version (asdf:find-system "40ants-ai-evals"))
+          (format nil "CHECK_PACK_LOADED:~A" system)))
 
 (deftest cold-asdf-system-loading
   (let ((scratch (temporary-directory "asdf-cold-load")))

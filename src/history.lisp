@@ -14,6 +14,12 @@
 (defun present (value)
   (unless (eq value :null) value))
 
+(-> run-suite (hash-table)
+    string)
+(defun run-suite (run)
+  "Legacy archives contain only the original Common Lisp suite."
+  (or (present (field run "suite")) "writing-common-lisp"))
+
 (-> split-provider-label (t)
     (values t t))
 (defun split-provider-label (label)
@@ -67,18 +73,27 @@
           for file = (at dir "summary.json")
           when (probe-file file) collect (read-json file))))
 
-(-> find-run (string &optional list)
+(-> find-run (string &rest t)
     t)
-(defun find-run (id &optional (all (histories)))
-  "Resolve an exact ID, unique label, latest or previous."
-  (cond ((equal id "latest") (car (last all)))
-        ((equal id "previous") (when (> (length all) 1) (nth (- (length all) 2) all)))
-        (t (or (find id all :key (lambda (run) (field run "id")) :test #'equal)
-               (let ((labelled (remove-if-not
-                                (lambda (run) (equal id (field run "label"))) all)))
-                 (when (> (length labelled) 1)
-                   (error "Ambiguous label ~A; use an exact run ID" id))
-                 (first labelled))))))
+(defun find-run (id &rest options)
+  "Resolve IDs, labels and relative selectors, optionally restricted with :SUITE.
+An optional positional history list preserves the original reader API. Exact IDs
+remain selectable across suites so comparison can report a clear identity error."
+  (let* ((all (if (and options (not (keywordp (first options))))
+                  (pop options) (histories)))
+         (suite (getf options :suite))
+         (selected (if suite
+                       (remove-if-not (lambda (run) (equal suite (run-suite run))) all)
+                       all)))
+    (cond ((equal id "latest") (car (last selected)))
+          ((equal id "previous")
+           (when (> (length selected) 1) (nth (- (length selected) 2) selected)))
+          (t (or (find id all :key (lambda (run) (field run "id")) :test #'equal)
+                 (let ((labelled (remove-if-not
+                                  (lambda (run) (equal id (field run "label"))) selected)))
+                   (when (> (length labelled) 1)
+                     (error "Ambiguous label ~A; use an exact run ID" id))
+                   (first labelled)))))))
 
 (-> result-row (hash-table &optional hash-table)
     hash-table)
@@ -171,9 +186,13 @@
                 (field agent-stats (first agents) variant)
                 (variant-statistics nil))))
     (dolist (key '("id" "label" "started" "skillHash" "suiteHash" "model" "effort"
-                   "group" "cases" "repeat" "tools"))
+                   "group" "cases" "repeat" "tools" "environment"
+                   "environmentVersions" "environmentFingerprint" "fixturesHash"))
       (setf (gethash key summary) (field manifest key)))
-    (setf (gethash "processStatus" summary) status
+    (setf (gethash "suite" summary) (run-suite manifest)
+          (gethash "skillName" summary) (or (present (field manifest "skillName"))
+                                           "writing-common-lisp")
+          (gethash "processStatus" summary) status
           (gethash "processSignal" summary) signal
           (gethash "agents" summary) (coerce agents 'vector)
           (gethash "profiles" summary) profiles
@@ -209,7 +228,8 @@
     t)
 (defun print-summary (summary)
   "Print scores and failures with artifact location."
-  (format t "~%~A (~A)~%" (field summary "id") (field summary "label"))
+  (format t "~%~A (~A) [~A]~%" (field summary "id") (field summary "label")
+          (run-suite summary))
   (if (hash-table-p (field summary "agentVariants"))
       (maphash (lambda (agent variants)
                  (maphash (lambda (variant stats)
@@ -257,13 +277,14 @@
 (defun run-has-agent-p (run agent)
   (not (null (member agent (run-agents run) :test #'equal))))
 
-(-> print-history-runs (list t)
+(-> print-history-runs (list t &optional t)
     t)
-(defun print-history-runs (runs agent)
+(defun print-history-runs (runs agent &optional suite)
   (when (and agent (not (member agent '("codex" "opencode") :test #'equal)))
     (error "Unknown agent ~A; supported agents are codex and opencode" agent))
   (dolist (run runs)
-    (when (or (null agent) (run-has-agent-p run agent))
+    (when (and (or (null suite) (equal suite (run-suite run)))
+               (or (null agent) (run-has-agent-p run agent)))
       (let* ((rows (remove-if-not (lambda (row)
                                     (or (null agent)
                                         (equal agent (summary-row-agent-variant-agent row))))
@@ -276,16 +297,16 @@
                            (floor (field run "expected")
                                   (max 1 (length (sequence-list (field run "agents")))))
                            (field run "expected"))))
-        (format t "~A  ~A  ~A  ~D/~D passed; coverage ~D/~D [~A]~%"
+        (format t "~A  ~A  ~A  ~D/~D passed; coverage ~D/~D [~A; suite=~A]~%"
                 (field run "id") (field run "label") model
                 (count-if (lambda (row) (true-p (field row "pass"))) rows)
-                (length rows) (length rows) expected (or agent "all"))))))
+                (length rows) (length rows) expected (or agent "all") (run-suite run))))))
 
-(-> print-history (&key (:agent t))
+(-> print-history (&key (:agent t) (:suite t))
     t)
-(defun print-history (&key agent)
-  "List accumulated runs, optionally counting rows for AGENT only."
-  (print-history-runs (histories) agent))
+(defun print-history (&key agent suite)
+  "List accumulated runs, optionally selecting SUITE and counting AGENT only."
+  (print-history-runs (histories) agent suite))
 
 (-> case-ratio (hash-table string string string)
     string)
@@ -300,20 +321,25 @@
     (format nil "~D/~D" (count-if (lambda (row) (true-p (field row "pass"))) rows) (length rows))))
 
 (-> compare-runs (t t &key (:allow-mismatch t) (:agent t)
-                    (:before-agent t) (:after-agent t))
+                    (:before-agent t) (:after-agent t) (:suite t))
     t)
-(defun compare-runs (before after &key allow-mismatch agent before-agent after-agent)
+(defun compare-runs (before after &key allow-mismatch agent before-agent after-agent suite)
   "Compare runs for AGENT, or select each side with BEFORE-AGENT and AFTER-AGENT.
 Different agent selectors produce an agent/model comparison, not a skill regression.
-ALLOW-MISMATCH prints suite or same-agent profile differences instead of rejecting them."
+ALLOW-MISMATCH prints fingerprint or same-agent profile differences instead of rejecting them.
+Different suite identities are always rejected; SUITE restricts both selected runs."
   (unless (and before after) (error "Need two existing runs: ~A" (list before after)))
+  (unless (equal (run-suite before) (run-suite after))
+    (error "Cannot compare different suites: ~A vs ~A" (run-suite before) (run-suite after)))
+  (when (and suite (not (equal suite (run-suite before))))
+    (error "Selected runs belong to suite ~A, not ~A" (run-suite before) suite))
   (unless (or agent before-agent after-agent)
     (let ((common-agents (intersection (run-agents before) (run-agents after) :test #'equal)))
       (unless common-agents
         (error "Runs ~A and ~A have no common agent; select each side explicitly"
                (field before "id") (field after "id")))
       (dolist (common-agent common-agents)
-        (compare-runs before after :agent common-agent :allow-mismatch allow-mismatch))
+        (compare-runs before after :agent common-agent :allow-mismatch allow-mismatch :suite suite))
       (return-from compare-runs nil)))
   (let* ((before-agent (or before-agent agent "codex"))
          (after-agent (or after-agent agent "codex"))
@@ -334,7 +360,9 @@ ALLOW-MISMATCH prints suite or same-agent profile differences instead of rejecti
                                           (field after key)))))
                                 '("suiteHash" "model" "effort" "group" "cases" "repeat"
                                   "tools" "mode" "timeout" "settings"
-                                  "evaluationTimeoutMs" "executionTimeoutMs"))))
+                                  "evaluationTimeoutMs" "executionTimeoutMs"
+                                  "environment" "environmentVersions" "environmentFingerprint"
+                                  "fixturesHash"))))
     (unless (run-has-agent-p before before-agent)
       (error "Run ~A has no results or profile for agent ~A"
              (field before "id") before-agent))

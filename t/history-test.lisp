@@ -190,3 +190,37 @@
     (ok (search "run [opencode]:" output))
     (ok (search "111" output))
     (ok (search "222" output))))
+
+(deftest suite-identity-and-filtering
+  (let* ((legacy (dict "id" "legacy" "label" "old" "expected" 0 "rows" #()))
+         (repl (dict "id" "repl" "label" "new" "suite" "repl"
+                     "expected" 0 "rows" #()))
+         (output (with-output-to-string (*standard-output*)
+                   (40ants-ai-evals/history::print-history-runs (list legacy repl) nil "repl"))))
+    (ok (search "repl" output))
+    (ok (eq legacy (find-run "latest" (list legacy repl) :suite "writing-common-lisp")))
+    (ok (null (find-run "previous" (list legacy repl) :suite "repl")))
+    (ok (eq legacy (find-run "legacy" (list legacy repl) :suite "repl")))
+    (ok (not (search "legacy" output)))
+    (ok (signals (compare-runs legacy repl :allow-mismatch t)))
+    (ok (signals (compare-runs legacy legacy :suite "repl")))
+    (ok (not (signals (compare-runs legacy legacy :suite "writing-common-lisp"))))
+    (ok (null (gethash "suite" legacy)) "Reading a legacy run does not mutate its archive")))
+
+(deftest suite-and-environment-summary
+  (let* ((manifest (dict "suite" "repl" "skillName" "managing-repl"
+                         "environment" (dict "profile" "repl" "versions" (dict "sbcl" "2.6"))
+                         "environmentFingerprint" "env-one" "fixturesHash" "fixtures-one"
+                         "cases" #("one") "repeat" 1 "variants" #("with-skill")))
+         (summary (make-summary manifest nil 0)))
+    (ok (equal "repl" (field summary "suite")))
+    (ok (equal "managing-repl" (field summary "skillName")))
+    (ok (equal "2.6" (field summary "environment" "versions" "sbcl")))
+    (ok (equal "env-one" (field summary "environmentFingerprint")))
+    (setf (gethash "environmentFingerprint" manifest) "env-two")
+    (let ((after (make-summary manifest nil 0)))
+      (ok (signals (compare-runs summary after)))
+      (ok (not (signals (compare-runs summary after :allow-mismatch t))))))
+  (ok (equal "writing-common-lisp"
+             (field (make-summary (dict "cases" #() "repeat" 1 "variants" #()) nil 0)
+                    "suite"))))

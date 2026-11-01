@@ -164,3 +164,27 @@
     (let ((result (normalize-transcript transcript)))
       (ok (= 20 (field result "usage" "input_tokens")))
       (ok (= 38 (field result "usage" "total_tokens"))))))
+
+
+(deftest completed-shell-with-nonzero-exit-is-not-success
+  (let* ((transcript
+           (dict "messages"
+                 (vector (dict "type" "assistant" "id" "a"
+                               "content"
+                               (vector (dict "type" "tool" "id" "bad" "name" "shell"
+                                             "state" (dict "status" "completed" "input" (dict "command" "exit 7")
+                                                           "output" "failed" "metadata" (dict "exit" 7)))
+                                       (dict "type" "tool" "id" "good" "name" "shell"
+                                             "state" (dict "status" "completed" "input" (dict "command" "exit 0")
+                                                           "output" "ok" "metadata" (dict "exit" 0))))))))
+         (calls (field (normalize-transcript transcript) "toolCalls")))
+    (ok (= 2 (length calls)))
+    (ok (not (true-p (field (aref calls 0) "success"))))
+    (ok (true-p (field (aref calls 1) "success")))))
+
+
+(deftest native-v2-tool-content-is-preserved
+  (let ((state (dict "content" (vector (dict "type" "text" "text" "first")
+                                       (dict "type" "text" "text" "second")))))
+    (ok (equal (format nil "first~%second") (40ants-ai-evals/providers/opencode::tool-result state))))
+  (ok (equal "old output" (40ants-ai-evals/providers/opencode::tool-result (dict "output" "old output")))))

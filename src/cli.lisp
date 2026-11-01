@@ -2,6 +2,7 @@
 (uiop:define-package #:40ants-ai-evals/cli
   (:use #:cl)
   (:import-from #:asdf)
+  (:import-from #:40ants-ai-evals/suites)
   (:import-from #:40ants-ai-evals/checks)
   (:import-from #:40ants-ai-evals/collector)
   (:import-from #:40ants-ai-evals/grading/contracts)
@@ -42,7 +43,8 @@
     t)
 (defun help ()
   (format t "From the project nix-shell, after qlot install:~%~%")
-  (dolist (command '("test" "run --label baseline" "run --filter package-path"
+  (dolist (command '("test" "suites" "run --suite handling-json-in-common-lisp --filter smoke --agent all"
+                     "run --suite all --group all" "run --label baseline" "run --filter package-path"
                      "run --agent opencode --filter package-path" "run --agent all --filter package-path"
                      "run --group all --repeat 3" "run --ablation" "run --ref HEAD"
                      "checks" "history" "compare BEFORE AFTER" "replay RUN_ID_OR_DIRECTORY" "view"))
@@ -77,28 +79,37 @@
       (field (40ants-ai-evals/runner:grading-vars (serapeum:dict)) "checkSystems"))
      (asdf:test-system "40ants-ai-evals")
      0)
-    ((equal command "checks")
+    ((equal command "suites")
      (require-arguments flags positional nil 0 0)
-     (40ants-ai-evals/checks:load-check-systems
-      (field (40ants-ai-evals/runner:grading-vars (serapeum:dict)) "checkSystems"))
+     (write-line (encode (40ants-ai-evals/suites:describe-suites)))
+     0)
+    ((equal command "checks")
+     (require-arguments flags positional '("suite") 0 0)
+     (dolist (suite (40ants-ai-evals/suites:selected-suites flags))
+       (40ants-ai-evals/checks:load-check-systems
+        (field (40ants-ai-evals/runner:grading-vars
+                (serapeum:dict "suite" (field suite "id"))) "checkSystems")))
      (write-line (encode (40ants-ai-evals/checks:describe-checks)))
      0)
     ((equal command "run")
      (when positional (error "Unexpected run arguments: ~A" positional))
      (40ants-ai-evals/runner:run-eval flags))
     ((equal command "history")
-     (require-arguments flags positional '("agent") 0 0)
-     (40ants-ai-evals/history:print-history :agent (gethash "agent" flags))
+     (require-arguments flags positional '("agent" "suite") 0 0)
+     (40ants-ai-evals/history:print-history :agent (gethash "agent" flags) :suite (gethash "suite" flags))
      0)
     ((equal command "compare")
-     (require-arguments flags positional '("allow-mismatch" "agent" "before-agent" "after-agent") 0 2)
+     (require-arguments flags positional '("allow-mismatch" "agent" "before-agent" "after-agent" "suite") 0 2)
      (40ants-ai-evals/history:compare-runs
-      (40ants-ai-evals/history:find-run (or (first positional) "previous"))
-      (40ants-ai-evals/history:find-run (or (second positional) "latest"))
+      (40ants-ai-evals/history:find-run (or (first positional) "previous")
+                                           :suite (or (gethash "suite" flags) "writing-common-lisp"))
+      (40ants-ai-evals/history:find-run (or (second positional) "latest")
+                                           :suite (or (gethash "suite" flags) "writing-common-lisp"))
       :allow-mismatch (gethash "allow-mismatch" flags)
       :agent (gethash "agent" flags)
       :before-agent (gethash "before-agent" flags)
-      :after-agent (gethash "after-agent" flags))
+      :after-agent (gethash "after-agent" flags)
+      :suite (gethash "suite" flags))
      0)
     ((equal command "replay")
      (require-arguments flags positional nil 1 1)
@@ -106,7 +117,7 @@
             (run (unless (uiop:directory-exists-p argument)
                    (40ants-ai-evals/history:find-run argument)))
             (dir (if run (at (root) (format nil ".evals/runs/~A/" (field run "id")))
-                     (uiop:ensure-absolute-pathname argument)))
+                     (uiop:ensure-absolute-pathname argument (uiop:getcwd))))
             (result (40ants-ai-evals/runner:replay-run dir)))
        (format t "Regraded ~D samples; report: ~A~%" (length (field result "samples"))
                (at dir "replay-lisp.json")))

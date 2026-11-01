@@ -1,0 +1,376 @@
+[
+  {
+    "description": "smoke: Use $writing-40ants-doc-documentation",
+    "vars": {
+      "suite": "writing-40ants-doc-documentation",
+      "skillName": "writing-40ants-doc-documentation",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $writing-40ants-doc-documentation. Update the main documentation title to \"Demo queue\" while retaining the deterministic queue overview. Rebuild demo-docs with strict default warning settings and verify generated README. This is documentation-only: leave changelog untouched.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\"))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) \"Add two numbers.\" (+ a b))\n",
+        "demo-docs.asd": "(asdf:defsystem \"demo-docs\" :class :package-inferred-system :pathname \"docs/\" :depends-on (\"demo\" \"demo-docs/index\"))\n",
+        "docs/index.lisp": "(uiop:define-package #:demo-docs/index\n  (:use #:cl)\n  (:import-from #:40ants-doc #:defsection #:defsection-copy)\n  (:export #:@index #:@readme)\n)\n(in-package #:demo-docs/index)\n(40ants-doc:defsection @index (:title \"Demo\")\n  (demo system)\n  \"A deterministic queue for background jobs.\")\n(40ants-doc:defsection-copy @readme @index)\n",
+        "docs/changelog.lisp": "(uiop:define-package #:demo-docs/changelog (:use #:cl))\n(in-package #:demo-docs/changelog)\n",
+        "README.md": "Old generated readme.\n"
+      },
+      "environmentProfile": "docs",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)(?:[.]qlot/bin/build-docs|docs-builder:build).*demo-docs",
+                "output": "(?i)Done",
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))",
+                "forbiddenCommand": "(?is)(?:-e\\s+false|error-on-warnings\\s+nil)"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [],
+            "assertions": "(let ((readme (uiop:read-file-string \"README.md\")))\n(assert (search \"deterministic queue\" readme :test #'char-equal))\n(assert (> (length readme) 100)))\n(assert (search \"Demo queue\" (uiop:read-file-string \"README.md\") :test #'char-equal))"
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "docs/changelog.lisp",
+            "text": "(uiop:define-package #:demo-docs/changelog (:use #:cl))\n(in-package #:demo-docs/changelog)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "autodoc: Use $writing-40ants-doc-documentation",
+    "vars": {
+      "suite": "writing-40ants-doc-documentation",
+      "skillName": "writing-40ants-doc-documentation",
+      "id": "autodoc",
+      "group": "development",
+      "task": "Use $writing-40ants-doc-documentation. Add public API autodoc for demo to docs/index.lisp, keep the overview and README mirror, rebuild cleanly, and verify README documents ADD. Do not add a changelog entry for documentation work.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\"))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) \"Add two numbers.\" (+ a b))\n",
+        "demo-docs.asd": "(asdf:defsystem \"demo-docs\" :class :package-inferred-system :pathname \"docs/\" :depends-on (\"demo\" \"demo-docs/index\"))\n",
+        "docs/index.lisp": "(uiop:define-package #:demo-docs/index\n  (:use #:cl)\n  (:import-from #:40ants-doc #:defsection #:defsection-copy)\n  (:export #:@index #:@readme)\n)\n(in-package #:demo-docs/index)\n(40ants-doc:defsection @index (:title \"Demo\")\n  (demo system)\n  \"A deterministic queue for background jobs.\")\n(40ants-doc:defsection-copy @readme @index)\n",
+        "docs/changelog.lisp": "(uiop:define-package #:demo-docs/changelog (:use #:cl))\n(in-package #:demo-docs/changelog)\n",
+        "README.md": "Old generated readme.\n"
+      },
+      "environmentProfile": "docs",
+      "scenario": {
+        "name": "autodoc"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)(?:[.]qlot/bin/build-docs|docs-builder:build).*demo-docs",
+                "output": "(?i)Done",
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))",
+                "forbiddenCommand": "(?is)(?:-e\\s+false|error-on-warnings\\s+nil)"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [],
+            "assertions": "(let ((readme (uiop:read-file-string \"README.md\")))\n(assert (search \"ADD\" readme :test #'char-equal))\n(assert (search \"Add two numbers\" readme :test #'char-equal)))"
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "docs/changelog.lisp",
+            "text": "(uiop:define-package #:demo-docs/changelog (:use #:cl))\n(in-package #:demo-docs/changelog)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "xref-warning: Use $writing-40ants-doc-documentation",
+    "vars": {
+      "suite": "writing-40ants-doc-documentation",
+      "skillName": "writing-40ants-doc-documentation",
+      "id": "xref-warning",
+      "group": "development",
+      "task": "Use $writing-40ants-doc-documentation. The docs mention uppercase REPL and API as plain words. Fix the XREF warnings at their source without disabling strict warnings or removing content. Keep the overview and rebuild demo-docs cleanly.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\"))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) \"Add two numbers.\" (+ a b))\n",
+        "demo-docs.asd": "(asdf:defsystem \"demo-docs\" :class :package-inferred-system :pathname \"docs/\" :depends-on (\"demo\" \"demo-docs/index\"))\n",
+        "docs/index.lisp": "(uiop:define-package #:demo-docs/index\n  (:use #:cl)\n  (:import-from #:40ants-doc #:defsection #:defsection-copy)\n  (:export #:@index #:@readme)\n)\n(in-package #:demo-docs/index)\n(40ants-doc:defsection @index (:title \"Demo\")\n  (demo system)\n  \"A deterministic queue for background jobs. Use the REPL and API for inspection.\")\n(40ants-doc:defsection-copy @readme @index)\n",
+        "docs/changelog.lisp": "(uiop:define-package #:demo-docs/changelog (:use #:cl))\n(in-package #:demo-docs/changelog)\n",
+        "README.md": "Old generated readme.\n"
+      },
+      "environmentProfile": "docs",
+      "scenario": {
+        "name": "xref-warning"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)(?:[.]qlot/bin/build-docs|docs-builder:build).*demo-docs",
+                "output": "(?i)Done",
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))",
+                "forbiddenCommand": "(?is)(?:-e\\s+false|error-on-warnings\\s+nil)"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [],
+            "assertions": "(let ((readme (uiop:read-file-string \"README.md\")))\n(assert (search \"deterministic queue\" readme :test #'char-equal))\n(assert (> (length readme) 100)))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-functional-changelog: Use $writing-40ants-doc-documentation",
+    "vars": {
+      "suite": "writing-40ants-doc-documentation",
+      "skillName": "writing-40ants-doc-documentation",
+      "id": "heldout-functional-changelog",
+      "group": "holdout",
+      "task": "Use $writing-40ants-doc-documentation. ADD now accepts a third optional value (already implemented). Add a functional changelog entry version 0.2.0 dated 2026-11-01 describing this capability, include changelog in docs, regenerate cleanly and verify ChangeLog.md. Retain the README overview.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\"))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b &optional (c 0)) \"Add two or three numbers.\" (+ a b c))\n",
+        "demo-docs.asd": "(asdf:defsystem \"demo-docs\" :class :package-inferred-system :pathname \"docs/\" :depends-on (\"demo\" \"demo-docs/index\"))\n",
+        "docs/index.lisp": "(uiop:define-package #:demo-docs/index\n  (:use #:cl)\n  (:import-from #:40ants-doc #:defsection #:defsection-copy)\n  (:export #:@index #:@readme)\n)\n(in-package #:demo-docs/index)\n(40ants-doc:defsection @index (:title \"Demo\")\n  (demo system)\n  \"A deterministic queue for background jobs.\")\n(40ants-doc:defsection-copy @readme @index)\n",
+        "docs/changelog.lisp": "(uiop:define-package #:demo-docs/changelog (:use #:cl))\n(in-package #:demo-docs/changelog)\n",
+        "README.md": "Old generated readme.\n"
+      },
+      "environmentProfile": "docs",
+      "scenario": {
+        "name": "heldout-functional-changelog"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)(?:[.]qlot/bin/build-docs|docs-builder:build).*demo-docs",
+                "output": "(?i)Done",
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))",
+                "forbiddenCommand": "(?is)(?:-e\\s+false|error-on-warnings\\s+nil)"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [],
+            "assertions": "(let ((readme (uiop:read-file-string \"README.md\")))\n(assert (search \"deterministic queue\" readme :test #'char-equal))\n(assert (> (length readme) 100)))"
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [],
+            "assertions": "(let ((text (uiop:read-file-string \"ChangeLog.md\")))\n(assert (search \"0.2.0\" text)) (assert (search \"third\" text :test #'char-equal)))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: Update the 40ants-doc main title to \"Demo queue\" in docs/index",
+    "vars": {
+      "suite": "writing-40ants-doc-documentation",
+      "skillName": "writing-40ants-doc-documentation",
+      "id": "automatic",
+      "group": "development",
+      "task": "Update the 40ants-doc main title to \"Demo queue\" in docs/index.lisp, preserving the deterministic queue overview. Regenerate and verify the README through the documentation builder, with strict warning defaults. Keep changelog unchanged.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\"))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) \"Add two numbers.\" (+ a b))\n",
+        "demo-docs.asd": "(asdf:defsystem \"demo-docs\" :class :package-inferred-system :pathname \"docs/\" :depends-on (\"demo\" \"demo-docs/index\"))\n",
+        "docs/index.lisp": "(uiop:define-package #:demo-docs/index\n  (:use #:cl)\n  (:import-from #:40ants-doc #:defsection #:defsection-copy)\n  (:export #:@index #:@readme)\n)\n(in-package #:demo-docs/index)\n(40ants-doc:defsection @index (:title \"Demo\")\n  (demo system)\n  \"A deterministic queue for background jobs.\")\n(40ants-doc:defsection-copy @readme @index)\n",
+        "docs/changelog.lisp": "(uiop:define-package #:demo-docs/changelog (:use #:cl))\n(in-package #:demo-docs/changelog)\n",
+        "README.md": "Old generated readme.\n"
+      },
+      "environmentProfile": "docs",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)(?:[.]qlot/bin/build-docs|docs-builder:build).*demo-docs",
+                "output": "(?i)Done",
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))",
+                "forbiddenCommand": "(?is)(?:-e\\s+false|error-on-warnings\\s+nil)"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [],
+            "assertions": "(let ((readme (uiop:read-file-string \"README.md\")))\n(assert (search \"deterministic queue\" readme :test #'char-equal))\n(assert (> (length readme) 100)))\n(assert (search \"Demo queue\" (uiop:read-file-string \"README.md\") :test #'char-equal))"
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "docs/changelog.lisp",
+            "text": "(uiop:define-package #:demo-docs/changelog (:use #:cl))\n(in-package #:demo-docs/changelog)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "writing-40ants-doc-documentation",
+      "skillName": "writing-40ants-doc-documentation",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "fixtures": {},
+      "environmentProfile": "docs",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,312 @@
+[
+  {
+    "description": "smoke: Use $deploy-40ants-project",
+    "vars": {
+      "suite": "deploy-40ants-project",
+      "skillName": "deploy-40ants-project",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $deploy-40ants-project. Deploy a new demo release with a UTC timestamp revision, preserving config and data, flipping current atomically, restarting, verifying health, then keeping the newest three revisions. This is an isolated deployment simulator, not a real host. remote_shell accepts structured operations {operation,...fields} or the documented conventional commands; .eval-environment.json describes service demo and valid fields. Use the simulator to perform and verify the change.",
+      "shouldTrigger": true,
+      "fixtures": {},
+      "environmentProfile": "deploy",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/deploy-state",
+          "params": {
+            "target": null,
+            "maxReleases": 3,
+            "operations": [
+              "build",
+              "install-release",
+              "switch-current",
+              "restart",
+              "health",
+              "cleanup"
+            ],
+            "changed": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "rollback: Use $deploy-40ants-project",
+    "vars": {
+      "suite": "deploy-40ants-project",
+      "skillName": "deploy-40ants-project",
+      "id": "rollback",
+      "group": "development",
+      "task": "Use $deploy-40ants-project. Roll demo back to releases/20261029-100000 using an atomic current switch, restart and verify. Preserve all config and data and do not rebuild. This is an isolated deployment simulator, not a real host. remote_shell accepts structured operations {operation,...fields} or the documented conventional commands; .eval-environment.json describes service demo and valid fields. Use the simulator to perform and verify the change.",
+      "shouldTrigger": true,
+      "fixtures": {},
+      "environmentProfile": "deploy",
+      "scenario": {
+        "name": "rollback"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/deploy-state",
+          "params": {
+            "target": "releases/20261029-100000",
+            "maxReleases": 3,
+            "operations": [
+              "switch-current",
+              "restart",
+              "health"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "first-service: permissions, service identity and initial release",
+    "vars": {
+      "suite": "deploy-40ants-project",
+      "skillName": "deploy-40ants-project",
+      "id": "first-service",
+      "group": "development",
+      "task": "Use $deploy-40ants-project. Set up demo for the first time, creating a system service identity and protected config/data with serviceUser=\"demo\", dataMode=\"0700\", envMode=\"0600\", noRealSecrets=true through create-service. The environment uses placeholder secrets only. Build and install an initial immutable timestamped release including bundled libraries, switch current atomically, restart and verify, then prune safely. The unit must use the canonical /srv/services layout and sandbox directives. This is an isolated deployment simulator, not a real host. remote_shell accepts structured operations {operation,...fields} or documented modeled commands; .eval-environment.json and tool schema describe service demo and valid fields. Use the simulator to perform and verify the change.",
+      "shouldTrigger": true,
+      "fixtures": {},
+      "environmentProfile": "deploy",
+      "scenario": {
+        "name": "first-service"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/deploy-state",
+          "params": {
+            "target": null,
+            "maxReleases": 3,
+            "changed": true,
+            "expected": {
+              "serviceExists": true,
+              "serviceUser": "demo",
+              "dataMode": "0700",
+              "envMode": "0600",
+              "unit": {
+                "ProtectHome": "read-only",
+                "ProtectSystem": "strict",
+                "PrivateTmp": "true",
+                "NoNewPrivileges": "true",
+                "ReadWritePaths": "/srv/services/demo/data"
+              },
+              "envOwner": "root:root",
+              "dataOwner": "demo:demo"
+            },
+            "operations": [
+              "create-service",
+              "build",
+              "install-release",
+              "switch-current",
+              "restart",
+              "health",
+              "cleanup"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-config-changes: systemd and Caddy updates preserve persistent state",
+    "vars": {
+      "suite": "deploy-40ants-project",
+      "skillName": "deploy-40ants-project",
+      "id": "heldout-config-changes",
+      "group": "holdout",
+      "task": "Use $deploy-40ants-project. Apply canonical sandbox settings to demo unit with update-unit, reload systemd, restart and verify. Then update the service Caddy route with update-caddy root=\"/srv/services/demo/current/public\" and upstream=\"127.0.0.1:8081\"; validate as the caddy user (never root), then reload Caddy. Preserve secret config, mutable data, current revision and certificate state. This is an isolated deployment simulator, not a real host. remote_shell accepts structured operations {operation,...fields} or documented modeled commands; .eval-environment.json and tool schema describe service demo and valid fields. Use the simulator to perform and verify the change.",
+      "shouldTrigger": true,
+      "fixtures": {},
+      "environmentProfile": "deploy",
+      "scenario": {
+        "name": "heldout-config-changes"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/deploy-state",
+          "params": {
+            "target": "releases/20261030-100000",
+            "maxReleases": 3,
+            "expected": {
+              "unit": {
+                "ProtectHome": "read-only",
+                "ProtectSystem": "strict",
+                "PrivateTmp": "true",
+                "NoNewPrivileges": "true",
+                "ReadWritePaths": "/srv/services/demo/data"
+              },
+              "caddyRoot": "/srv/services/demo/current/public",
+              "upstream": "127.0.0.1:8081",
+              "caddyValidated": true,
+              "caddyReloaded": true
+            },
+            "operations": [
+              "update-unit",
+              "daemon-reload",
+              "restart",
+              "health",
+              "update-caddy",
+              "validate-caddy",
+              "caddy-reload"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: Deploy the demo service to a new production revision in the /srv/services scheme",
+    "vars": {
+      "suite": "deploy-40ants-project",
+      "skillName": "deploy-40ants-project",
+      "id": "automatic",
+      "group": "development",
+      "task": "Deploy the demo service to a new production revision in the /srv/services scheme. Preserve config/data, use UTC revision naming, switch atomically, restart, verify and prune to three revisions. This is an isolated deployment simulator, not a real host. remote_shell accepts structured operations {operation,...fields} or the documented conventional commands; .eval-environment.json describes service demo and valid fields. Use the simulator to perform and verify the change.",
+      "shouldTrigger": true,
+      "fixtures": {},
+      "environmentProfile": "deploy",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/deploy-state",
+          "params": {
+            "target": null,
+            "maxReleases": 3,
+            "operations": [
+              "build",
+              "install-release",
+              "switch-current",
+              "restart",
+              "health",
+              "cleanup"
+            ],
+            "changed": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "deploy-40ants-project",
+      "skillName": "deploy-40ants-project",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "fixtures": {},
+      "environmentProfile": "deploy",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

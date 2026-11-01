@@ -1,0 +1,86 @@
+[
+  {
+    "id": "writing-common-lisp",
+    "skillName": "writing-common-lisp",
+    "skillPath": "plugins/common-lisp-skills/skills/writing-common-lisp/",
+    "config": "evals/writing-common-lisp/promptfooconfig.json",
+    "environmentProfile": "lisp"
+  },
+  {
+    "id": "avoiding-common-lisp-pitfalls",
+    "skillName": "avoiding-common-lisp-pitfalls",
+    "skillPath": "plugins/common-lisp-skills/skills/avoiding-common-lisp-pitfalls/",
+    "config": "evals/avoiding-common-lisp-pitfalls/promptfooconfig.json",
+    "environmentProfile": "lisp"
+  },
+  {
+    "id": "clearing-asdf-fasl-cache",
+    "skillName": "clearing-asdf-fasl-cache",
+    "skillPath": "plugins/common-lisp-skills/skills/clearing-asdf-fasl-cache/",
+    "config": "evals/clearing-asdf-fasl-cache/promptfooconfig.json",
+    "environmentProfile": "cache"
+  },
+  {
+    "id": "defining-clos-classes",
+    "skillName": "defining-clos-classes",
+    "skillPath": "plugins/common-lisp-skills/skills/defining-clos-classes/",
+    "config": "evals/defining-clos-classes/promptfooconfig.json",
+    "environmentProfile": "lisp"
+  },
+  {
+    "id": "handling-json-in-common-lisp",
+    "skillName": "handling-json-in-common-lisp",
+    "skillPath": "plugins/common-lisp-skills/skills/handling-json-in-common-lisp/",
+    "config": "evals/handling-json-in-common-lisp/promptfooconfig.json",
+    "environmentProfile": "lisp"
+  },
+  {
+    "id": "logging-with-log4cl",
+    "skillName": "logging-with-log4cl",
+    "skillPath": "plugins/common-lisp-skills/skills/logging-with-log4cl/",
+    "config": "evals/logging-with-log4cl/promptfooconfig.json",
+    "environmentProfile": "lisp"
+  },
+  {
+    "id": "testing-with-rove",
+    "skillName": "testing-with-rove",
+    "skillPath": "plugins/common-lisp-skills/skills/testing-with-rove/",
+    "config": "evals/testing-with-rove/promptfooconfig.json",
+    "environmentProfile": "lisp"
+  },
+  {
+    "id": "using-common-lisp-repl",
+    "skillName": "using-common-lisp-repl",
+    "skillPath": "plugins/common-lisp-skills/skills/using-common-lisp-repl/",
+    "config": "evals/using-common-lisp-repl/promptfooconfig.json",
+    "environmentProfile": "repl"
+  },
+  {
+    "id": "lint-common-lisp",
+    "skillName": "lint-common-lisp",
+    "skillPath": "plugins/common-lisp-skills/skills/lint-common-lisp/",
+    "config": "evals/lint-common-lisp/promptfooconfig.json",
+    "environmentProfile": "lint"
+  },
+  {
+    "id": "writing-40ants-doc-documentation",
+    "skillName": "writing-40ants-doc-documentation",
+    "skillPath": "plugins/common-lisp-skills/skills/writing-40ants-doc-documentation/",
+    "config": "evals/writing-40ants-doc-documentation/promptfooconfig.json",
+    "environmentProfile": "docs"
+  },
+  {
+    "id": "deploy-40ants-project",
+    "skillName": "deploy-40ants-project",
+    "skillPath": "plugins/tools/skills/deploy-40ants-project/",
+    "config": "evals/deploy-40ants-project/promptfooconfig.json",
+    "environmentProfile": "deploy"
+  },
+  {
+    "id": "nix-shell-playwright",
+    "skillName": "nix-shell-playwright",
+    "skillPath": "plugins/tools/skills/nix-shell-playwright/",
+    "config": "evals/nix-shell-playwright/promptfooconfig.json",
+    "environmentProfile": "playwright"
+  }
+]

@@ -57,6 +57,19 @@ let
     '';
   })) ]);
   qlot = pkgs.writeShellScriptBin "qlot" ''
+    # Native providers copy fixtures without a dependency tree. Reuse only the
+    # declared project distribution while preserving the candidate's cwd.
+    if [ "''${1:-}" = exec ] && [ ! -f .qlot/setup.lisp ] && [ -n "''${SKILL_EVAL_DEPENDENCY_ROOT:-}" ]; then
+      shift
+      export QUICKLISP_HOME="$SKILL_EVAL_DEPENDENCY_ROOT/.qlot/"
+      case "''${1##*/}" in
+        ros)
+          shift
+          exec ros -Q -l ${./nix/lisp-init.lisp} "$@"
+          ;;
+      esac
+      exec "$@"
+    fi
     exec ${qlotRuntime}/bin/sbcl --noinform --no-userinit --no-sysinit \
       --non-interactive --eval '(require :asdf)' \
       --eval '(asdf:initialize-output-translations `(:output-translations (t (,(uiop:ensure-directory-pathname (uiop:getenv "XDG_CACHE_HOME")) :implementation)) :ignore-inherited-configuration))' \
@@ -67,23 +80,25 @@ let
   sbcl = pkgs.writeShellScriptBin "sbcl" ''
     case "''${1:-}" in
       --version|--help) exec ${pkgs.sbcl}/bin/sbcl "$@" ;;
+      --noinform) shift ;;
     esac
-    exec ${pkgs.sbcl}/bin/sbcl --no-userinit --no-sysinit --load ${./nix/lisp-init.lisp} "$@"
+    exec ${pkgs.sbcl}/bin/sbcl --noinform --no-userinit --no-sysinit --load ${./nix/lisp-init.lisp} "$@"
   '';
-  evalTools = [ toolchain pkgs.nodejs_22 sbcl pkgs.roswell qlot pkgs.curl pkgs.openssl pkgs.git pkgs.ripgrep apm
+  environments = import ./nix/eval-environments.nix { inherit pkgs; };
+  evalTools = environments.packages ++ [ toolchain pkgs.nodejs_22 sbcl pkgs.roswell qlot pkgs.curl pkgs.openssl pkgs.git pkgs.ripgrep apm
     pkgs.bashInteractive pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.gnused
     pkgs.gnutar pkgs.which pkgs.opencode ];
 in
 assert pkgs.opencode.version == "2.2.1";
 assert pkgs.stdenv.hostPlatform.system == "aarch64-darwin";
-pkgs.mkShell {
+pkgs.mkShell (environments.env // {
   packages = evalTools;
   SKILL_EVAL_TOOLCHAIN_DIR = "${toolchain}/lib/skill-eval-toolchain/node_modules";
   SKILL_EVAL_TOOL_PATH = "${pkgs.lib.makeBinPath evalTools}:/usr/bin:/bin:/usr/sbin:/sbin";
   PROMPTFOO_DISABLE_TELEMETRY = "1";
   PROMPTFOO_DISABLE_UPDATE = "1";
   shellHook = ''
-    export SHELL="${pkgs.bashInteractive}/bin/bash"
+    export SHELL="$SKILL_EVAL_SHELL"
     export PATH="$SKILL_EVAL_TOOL_PATH"
     export PROMPTFOO_CONFIG_DIR="$PWD/.evals/promptfoo"
     unset CL_SOURCE_REGISTRY ASDF_OUTPUT_TRANSLATIONS QUICKLISP_HOME
@@ -97,4 +112,4 @@ pkgs.mkShell {
     export APM_CACHE_DIR="$PWD/.evals/apm-cache"
     echo "Eval tools: promptfoo 0.125.1, Codex SDK/CLI 0.156.1, OpenCode 2.2.1, APM 0.31.0, Roswell ${pkgs.roswell.version}, Qlot ${pkgs.sbclPackages.qlot.version} (pinned Nix store)"
   '';
-}
+})

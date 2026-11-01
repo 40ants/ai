@@ -3,7 +3,14 @@
   (:import-from #:40ants-doc/changelog #:defchangelog))
 (in-package #:40ants-ai-evals-docs/changelog)
 
-(defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo"))
+(defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP"))
+  (0.3.0 2026-11-01
+         "* Added evaluation suites for the remaining eleven project skills and
+suite selection, independent behavioral checks, and reproducible tool environments.
+* Archived tool calls, binary artifacts, symbolic links, and environment identity.
+* Added suite-aware history comparisons and multi-suite batch indexes.
+* Preserved provider artifacts across evaluator timeouts and exposed prepared
+MCP runners with native tool-result evidence.")
   (0.2.0 2026-11-01
          "* Renamed the main system package namespace to `40ants-ai-evals/*` and the
 test system and package namespace to `40ants-ai-evals-tests/*`.

@@ -1,0 +1,409 @@
+[
+  {
+    "description": "smoke: Use $lint-common-lisp",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $lint-common-lisp. Run both project linters, fix the unused import in demo/src/core with minimal edits, run the applicable test command, and rerun both tools. Do not install dependencies.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\") :in-order-to ((asdf:test-op (asdf:test-op \"demo-tests\"))))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:import-from #:cl-ppcre #:scan)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) (+ a b))\n",
+        "AGENTS.md": "After source changes run the complete fixture test suite: qlot exec ros run -- --non-interactive --eval '(asdf:test-system \"demo\")' --quit. Do not edit tests or the test-op configuration to mask source failures.\n",
+        "demo-tests.asd": "(asdf:defsystem \"demo-tests\" :class :package-inferred-system :pathname \"tests/\" :depends-on (\"rove\" \"demo\" \"demo-tests/core-test\") :perform (asdf:test-op (op system) (declare (ignore op)) (unless (uiop:symbol-call :rove :run system) (error \"Tests failed\"))))\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test (:use #:cl) (:import-from #:rove #:deftest #:ok) (:import-from #:demo/src/core #:add))\n(in-package #:demo-tests/core-test)\n(deftest add (ok (= 12 (add 5 7))))\n"
+      },
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*(?:src/core[.]lisp|format)",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              },
+              {
+                "pattern": "(?is)40ants-linter.*--imports.*(?:-s|--system).*demo",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp"
+            ],
+            "systems": [],
+            "assertions": "(assert (= 12 (demo/src/core:add 5 7)))"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:test-system.*demo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "scope-vendor: Use $lint-common-lisp",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "scope-vendor",
+      "group": "development",
+      "task": "Use $lint-common-lisp. Lint and fix tracked project Common Lisp sources with both applicable linters. Keep vendor/broken.lisp untouched and exclude it from tool scope. Run tests after changes and rerun tools.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\") :in-order-to ((asdf:test-op (asdf:test-op \"demo-tests\"))))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:import-from #:cl-ppcre #:scan)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) (+ a b))\n",
+        "vendor/broken.lisp": "(this vendor file is intentionally unbalanced\n",
+        ".gitignore": "vendor/\n",
+        "AGENTS.md": "After source changes run the complete fixture test suite: qlot exec ros run -- --non-interactive --eval '(asdf:test-system \"demo\")' --quit. Do not edit tests or the test-op configuration to mask source failures.\n",
+        "demo-tests.asd": "(asdf:defsystem \"demo-tests\" :class :package-inferred-system :pathname \"tests/\" :depends-on (\"rove\" \"demo\" \"demo-tests/core-test\") :perform (asdf:test-op (op system) (declare (ignore op)) (unless (uiop:symbol-call :rove :run system) (error \"Tests failed\"))))\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test (:use #:cl) (:import-from #:rove #:deftest #:ok) (:import-from #:demo/src/core #:add))\n(in-package #:demo-tests/core-test)\n(deftest add (ok (= 12 (add 5 7))))\n"
+      },
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "scope-vendor"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*(?:src/core[.]lisp|format)",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              },
+              {
+                "pattern": "(?is)40ants-linter.*--imports.*(?:-s|--system).*demo",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp"
+            ],
+            "systems": [],
+            "assertions": "(assert (= 12 (demo/src/core:add 5 7)))"
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "vendor/broken.lisp",
+            "text": "(this vendor file is intentionally unbalanced\n"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:test-system.*demo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "missing-tool: Use $lint-common-lisp",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "missing-tool",
+      "group": "development",
+      "task": "Use $lint-common-lisp. Review src/core.lisp with the available tools. This fixture deliberately has no ASDF system and no 40ants-linter executable, and networking/installations are forbidden. Run Mallet and explain precisely which import verification could not be applied. Preserve this source.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) (+ a b))\n"
+      },
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "missing-tool"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*src/core[.]lisp"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "src/core.lisp",
+            "text": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) (+ a b))\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-runtime-import: Use $lint-common-lisp",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "heldout-runtime-import",
+      "group": "holdout",
+      "task": "Use $lint-common-lisp. Run both linters on demo, resolve actionable issues, preserve imports used by qualified symbols, verify ADD at runtime, and rerun. Do not remove SERAPEUM:DICT: it builds the response object.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\") :in-order-to ((asdf:test-op (asdf:test-op \"demo-tests\"))))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:import-from #:serapeum #:dict)\n  (:import-from #:cl-ppcre #:scan)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) (serapeum:dict \"total\" (+ a b)))\n",
+        "AGENTS.md": "After source changes run the complete fixture test suite: qlot exec ros run -- --non-interactive --eval '(asdf:test-system \"demo\")' --quit. Do not edit tests or the test-op configuration to mask source failures.\n",
+        "demo-tests.asd": "(asdf:defsystem \"demo-tests\" :class :package-inferred-system :pathname \"tests/\" :depends-on (\"rove\" \"demo\" \"demo-tests/core-test\") :perform (asdf:test-op (op system) (declare (ignore op)) (unless (uiop:symbol-call :rove :run system) (error \"Tests failed\"))))\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test (:use #:cl) (:import-from #:rove #:deftest #:ok) (:import-from #:demo/src/core #:add))\n(in-package #:demo-tests/core-test)\n(deftest add (ok (= 12 (gethash \"total\" (add 5 7)))))\n"
+      },
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "heldout-runtime-import"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*(?:src/core[.]lisp|format)",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              },
+              {
+                "pattern": "(?is)40ants-linter.*--imports.*(?:-s|--system).*demo",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp"
+            ],
+            "systems": [
+              "serapeum"
+            ],
+            "assertions": "(assert (= 12 (gethash \"total\" (demo/src/core:add 5 7))))"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:test-system.*demo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: Review demo Common Lisp sources for lint errors, including missing and unused package imports",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "automatic",
+      "group": "development",
+      "task": "Review demo Common Lisp sources for lint errors, including missing and unused package imports. Run both applicable linters, fix minimally, test, and rerun. Do not install dependencies.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/core\") :in-order-to ((asdf:test-op (asdf:test-op \"demo-tests\"))))\n",
+        "src/core.lisp": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:import-from #:cl-ppcre #:scan)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) (+ a b))\n",
+        "AGENTS.md": "After source changes run the complete fixture test suite: qlot exec ros run -- --non-interactive --eval '(asdf:test-system \"demo\")' --quit. Do not edit tests or the test-op configuration to mask source failures.\n",
+        "demo-tests.asd": "(asdf:defsystem \"demo-tests\" :class :package-inferred-system :pathname \"tests/\" :depends-on (\"rove\" \"demo\" \"demo-tests/core-test\") :perform (asdf:test-op (op system) (declare (ignore op)) (unless (uiop:symbol-call :rove :run system) (error \"Tests failed\"))))\n",
+        "tests/core-test.lisp": "(uiop:define-package #:demo-tests/core-test (:use #:cl) (:import-from #:rove #:deftest #:ok) (:import-from #:demo/src/core #:add))\n(in-package #:demo-tests/core-test)\n(deftest add (ok (= 12 (add 5 7))))\n"
+      },
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*(?:src/core[.]lisp|format)",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              },
+              {
+                "pattern": "(?is)40ants-linter.*--imports.*(?:-s|--system).*demo",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp"
+            ],
+            "systems": [],
+            "assertions": "(assert (= 12 (demo/src/core:add 5 7)))"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:test-system.*demo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "fixtures": {},
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

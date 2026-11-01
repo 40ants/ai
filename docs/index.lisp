@@ -26,7 +26,7 @@
                                    "SBCL" "SDK" "Serapeum" "SQL" "Unlicense" "URL"
                                    "USD" "XDG" "`SQLite`" "MIT" "VPS" "CLOS"
                                    "EFFORT" "HEAD" "HTML" "ID" "ISO" "JS" "JSONL"
-                                   "PATH" "SHA-256" "SSE"
+                                   "PATH" "SHA-256" "SSE" "SSH" "PNG"
                                    "UTF-8" "UTC" "ZAI" "`macOS`" "Ultralisp"))
   (40ants-ai-evals system)
   """
@@ -37,6 +37,7 @@ results with Lisp checks.
 """
   (@packages section)
   (@evaluations section)
+  (@other-skills section)
   (@development section)
   (@api section))
 
@@ -523,6 +524,107 @@ References: [Promptfoo native Codex SDK provider](https://www.promptfoo.dev/docs
 [APM install and frozen dependencies](https://microsoft.github.io/apm/reference/cli/install/).
 """)
 
+
+(defsection @other-skills (:title "Evaluate any project skill")
+  """
+The suite catalog in `evals/suites.json` includes all 12 project skills.
+The original `writing-common-lisp` remains the default; the other 11 skills
+have six cases each: four functional tasks, automatic activation and an
+unrelated task. One functional case per skill belongs to the holdout group.
+Externally installed APM skills are not included.
+
+From the pinned project shell, list suites and their check schemas:
+
+```bash
+qlot exec ros roswell/ai-evals.ros suites
+qlot exec ros roswell/ai-evals.ros checks --suite handling-json-in-common-lisp
+```
+
+Start with one sample before selecting a larger matrix:
+
+```bash
+qlot exec ros roswell/ai-evals.ros run --suite handling-json-in-common-lisp --filter smoke --agent codex --repeat 1 --label json-baseline
+qlot exec ros roswell/ai-evals.ros run --suite handling-json-in-common-lisp --filter smoke --agent opencode --repeat 1 --label json-opencode
+```
+
+Run the full catalog explicitly, including holdouts, on both agents:
+
+```bash
+qlot exec ros roswell/ai-evals.ros run --suite all --group all --agent all --repeat 1 --label all-skills
+```
+
+This includes the original 11 cases and 66 new cases, making 154 samples.
+Each suite has its own Promptfoo evaluation. Multi-suite runs also retain
+an index under `.evals/batches/`, including failed suites and child run IDs.
+Without `--group all`, holdout cases are excluded. Repeats and ablation
+multiply the number of model calls; neither is enabled implicitly.
+
+### Working environments
+
+Python, Playwright and Chromium come from Nix. Additional Lisp tools are
+pinned in `qlfile.lock`; run `qlot install` after updating the checkout.
+Each sample gets its own copied workspace. Preflight checks run before
+model calls, including an actual browser launch for browser suites.
+
+The REPL suite connects an isolated persistent Lisp image through MCP.
+Its state survives tool calls within that sample. Cache cases use explicit
+fixture directories, preserving the user's real ASDF cache. Documentation
+and lint cases use the real pinned tools. Deployment cases use a virtual
+server with modeled releases, services and health checks; its operations
+never invoke real SSH, sudo or systemd.
+
+The prepared browser MCP runner accepts only `./run_smoke_test.sh` and
+executes the generated wrapper with the pinned browser. This avoids browser
+startup failures inside the agent's subprocess sandbox. It does not generate
+or repair candidate tests. The fixture MCP exposes only its profile's tool;
+Codex approvals are configured for that private tool, as described in the
+[official OpenAI documentation](https://learn.chatgpt.com/docs/extend/mcp).
+OpenCode exposes fixture tools directly: its nested execution mode omits
+native child-tool results and cannot provide authoritative state evidence.
+
+The default sample deadline remains 240 seconds. For longer tool workflows,
+select a larger deadline explicitly, for example `--timeout 600000`.
+Timeouts are infrastructure errors and do not prove a skill regression.
+
+### Inspect failures and accumulated results
+
+```bash
+qlot exec ros roswell/ai-evals.ros view
+qlot exec ros roswell/ai-evals.ros history --suite handling-json-in-common-lisp
+qlot exec ros roswell/ai-evals.ros compare BEFORE_RUN_ID AFTER_RUN_ID --suite handling-json-in-common-lisp
+qlot exec ros roswell/ai-evals.ros replay RUN_ID
+```
+
+Open a failed cell in Promptfoo to inspect its assertion reason. The same
+reason is recorded under `.evals/runs/RUN_ID/samples/SAMPLE_ID/grading.json`.
+`sample.json` contains collected source files and normalized tool calls;
+`turn.json` retains the raw transcript. Binary artifacts, including PNG
+screenshots, live beside it under `artifacts/`, with hashes and dimensions
+in the artifact metadata. OpenCode also captures files beside its raw provider
+trace before returning, so an outer evaluator timeout can recover them into
+the standard sample archive. Missing or ambiguous recovery evidence is marked
+unavailable instead of being assigned to an unrelated sample. Symbolic links are recorded without following them.
+
+History records suite identity, skill and check fingerprints, fixtures,
+environment versions and agent profiles. Runs from different suites cannot
+be compared as if they contained the same tasks. Old archives are treated
+as the original suite and remain unchanged; replay reports missing evidence
+when older formats lack tool calls, binary metadata or environment records.
+Replay writes a separate report without replacing original scores.
+
+Explicit Codex tasks in the new suites request a read of the installed
+`SKILL.md` file. Native dollar references can inject skill contents before
+SDK tool tracing; Promptfoo's heuristic cannot observe that injection.
+Automatic activation cases omit the explicit reference. A missing observed
+read must not be interpreted as proof that native injection did not happen.
+
+Assertions are independent ASDF extensions. Their calibration tests accept
+known-good artifacts and reject deliberately broken artifacts. A valid test
+can expose an existing skill defect: do not change the assertion merely to
+make the current skill pass. A single smoke sample validates integration;
+it does not establish statistical improvement.
+""")
+
 (defsection @development (:title "Developing the Lisp systems")
   """
 The harness, tests and generated documentation use separate ASDF systems.
@@ -539,7 +641,7 @@ offline Rove suite. For example, `t/suite.lisp` defines
 The separate `40ants-ai-evals-docs` system is rooted at `docs/`. Its
 `docs/index.lisp` builds the generated root README and the site under
 `docs/build/`; `docs/changelog.lisp` is the source of the project version
-(`0.2.0`) as well as the release notes. The docs system's dependencies stay
+(`0.3.0`) as well as the release notes. The docs system's dependencies stay
 out of the main runtime system. `README.md` and `ChangeLog.md` are generated
 from these sources, and `docs/build/` is ignored by Git. There is no CI docs
 build configured.

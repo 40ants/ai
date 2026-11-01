@@ -8,3 +8,6 @@ apm_modules/
 
 # 40ants-doc local output
 /docs/build/
+
+# Per-process compiler outputs; project dependencies remain pinned by Qlot.
+/.eval-cache/

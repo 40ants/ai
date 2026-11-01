@@ -1,0 +1,277 @@
+[
+  {
+    "description": "smoke: Use $handling-json-in-common-lisp",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $handling-json-in-common-lisp. Implement exported ROUNDTRIP in src/json.lisp: accept a JSON string and return encoded JSON preserving objects, arrays, null, booleans and Unicode. No dependency installation.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/json.lisp": "(uiop:define-package #:demo/src/json (:use #:cl) (:export #:roundtrip #:null-field-p #:make-response))\n(in-package #:demo/src/json)\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertions": "(let* ((input \"{\\\"nil\\\":null,\\\"false\\\":false,\\\"empty\\\":[],\\\"items\\\":[1,{\\\"label\\\":\\\"Привет\\\"}]}\")\n               (output (demo/src/json:roundtrip input))\n               (parsed (yason:parse output :json-arrays-as-vectors t :json-booleans-as-symbols t :json-nulls-as-keyword t)))\n          (assert (hash-table-p parsed)) (assert (eq :null (gethash \"nil\" parsed)))\n          (assert (eq 'yason:false (gethash \"false\" parsed)))\n          (assert (equalp #() (gethash \"empty\" parsed)))\n          (assert (string= \"Привет\" (gethash \"label\" (aref (gethash \"items\" parsed) 1)))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "null-versus-missing: Use $handling-json-in-common-lisp",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "null-versus-missing",
+      "group": "development",
+      "task": "Use $handling-json-in-common-lisp. Implement NULL-FIELD-P(object,key) in src/json.lisp, true only for a present JSON-null value. False and absent keys must not count as null.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/json.lisp": "(uiop:define-package #:demo/src/json (:use #:cl) (:export #:roundtrip #:null-field-p #:make-response))\n(in-package #:demo/src/json)\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "null-versus-missing"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertions": "(assert (demo/src/json:null-field-p (serapeum:dict \"x\" :null) \"x\"))\n(assert (not (demo/src/json:null-field-p (serapeum:dict \"x\" nil) \"x\")))\n(assert (not (demo/src/json:null-field-p (serapeum:dict) \"x\")))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "nested-object: Use $handling-json-in-common-lisp",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "nested-object",
+      "group": "development",
+      "task": "Use $handling-json-in-common-lisp. Implement MAKE-RESPONSE(name,count) returning JSON object with user={name:name}, count=count, cursor=null. Use string-keyed dictionaries.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/json.lisp": "(uiop:define-package #:demo/src/json (:use #:cl) (:export #:roundtrip #:null-field-p #:make-response))\n(in-package #:demo/src/json)\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "nested-object"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertions": "(let ((object (demo/src/json:make-response \"Ada\" 7)))\n(assert (hash-table-p object))\n(assert (string= \"Ada\" (gethash \"name\" (gethash \"user\" object))))\n(assert (= 7 (gethash \"count\" object)))\n(assert (eq :null (gethash \"cursor\" object)))\n(assert (hash-table-p (yason:parse (yason:with-output-to-string* () (yason:encode object))))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-nested-roundtrip: Use $handling-json-in-common-lisp",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "heldout-nested-roundtrip",
+      "group": "holdout",
+      "task": "Use $handling-json-in-common-lisp. Implement ROUNDTRIP in src/json.lisp preserving nested empty objects and arrays, false, null and strings. Function returns encoded JSON string.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/json.lisp": "(uiop:define-package #:demo/src/json (:use #:cl) (:export #:roundtrip #:null-field-p #:make-response))\n(in-package #:demo/src/json)\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "heldout-nested-roundtrip"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertions": "(let* ((input \"{\\\"outer\\\":[{},[],false,null,\\\"\\\"]}\")\n(out (demo/src/json:roundtrip input))\n(a (yason:parse input :json-arrays-as-vectors t :json-booleans-as-symbols t :json-nulls-as-keyword t))\n(b (yason:parse out :json-arrays-as-vectors t :json-booleans-as-symbols t :json-nulls-as-keyword t)))\n(assert (hash-table-p (aref (gethash \"outer\" b) 0)))\n(assert (equalp (subseq (gethash \"outer\" a) 1) (subseq (gethash \"outer\" b) 1))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: In this Common Lisp YASON project implement ROUNDTRIP in src/json",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "automatic",
+      "group": "development",
+      "task": "In this Common Lisp YASON project implement ROUNDTRIP in src/json.lisp, returning encoded JSON that preserves objects, arrays, null, booleans and Unicode. No dependency installation.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "src/json.lisp": "(uiop:define-package #:demo/src/json (:use #:cl) (:export #:roundtrip #:null-field-p #:make-response))\n(in-package #:demo/src/json)\n"
+      },
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertions": "(let* ((input \"{\\\"nil\\\":null,\\\"false\\\":false,\\\"empty\\\":[],\\\"items\\\":[1,{\\\"label\\\":\\\"Привет\\\"}]}\")\n               (output (demo/src/json:roundtrip input))\n               (parsed (yason:parse output :json-arrays-as-vectors t :json-booleans-as-symbols t :json-nulls-as-keyword t)))\n          (assert (hash-table-p parsed)) (assert (eq :null (gethash \"nil\" parsed)))\n          (assert (eq 'yason:false (gethash \"false\" parsed)))\n          (assert (equalp #() (gethash \"empty\" parsed)))\n          (assert (string= \"Привет\" (gethash \"label\" (aref (gethash \"items\" parsed) 1)))))"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "fixtures": {},
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

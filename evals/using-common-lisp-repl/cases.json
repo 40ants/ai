@@ -1,0 +1,290 @@
+[
+  {
+    "description": "smoke: Use $using-common-lisp-repl",
+    "vars": {
+      "suite": "using-common-lisp-repl",
+      "skillName": "using-common-lisp-repl",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $using-common-lisp-repl. Inspect DEMO/STATE:*COUNTER*, increment once using DEMO/STATE:INC-COUNTER, and leave it at 42. A persistent fixture Lisp image is reachable through eval_lisp_form. Use that image; .eval-environment.json describes it.",
+      "shouldTrigger": true,
+      "fixtures": {},
+      "environmentProfile": "repl",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/repl-state",
+          "params": {
+            "expected": {
+              "counter": 42
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "reload-file: Use $using-common-lisp-repl",
+    "vars": {
+      "suite": "using-common-lisp-repl",
+      "skillName": "using-common-lisp-repl",
+      "id": "reload-file",
+      "group": "development",
+      "task": "Use $using-common-lisp-repl. Change DEMO/SRC/COUNTER:VALUE in src/counter.lisp to return 7, then reload only that package-inferred file into the persistent image. Verify the live function returns 7 without resetting unrelated DEMO/STATE state. A persistent fixture Lisp image is reachable through eval_lisp_form. Use that image; .eval-environment.json describes it.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/counter\"))\n",
+        "src/counter.lisp": "(uiop:define-package #:demo/src/counter\n  (:use #:cl)\n  (:export #:value)\n)\n(in-package #:demo/src/counter)\n(defun value () 1)\n"
+      },
+      "environmentProfile": "repl",
+      "scenario": {
+        "name": "reload-file"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/repl-state",
+          "params": {
+            "expected": {
+              "counter": 41,
+              "value": 7
+            }
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:load-system(?=.*:force)(?=.*demo/src/counter)"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "deadline: Use $using-common-lisp-repl",
+    "vars": {
+      "suite": "using-common-lisp-repl",
+      "skillName": "using-common-lisp-repl",
+      "id": "deadline",
+      "group": "development",
+      "task": "Use $using-common-lisp-repl. Evaluate an intentional infinite (loop (sleep 0.05)) in the fixture image under SB-SYS:WITH-DEADLINE with a one-second limit; observe DEADLINE-TIMEOUT, then prove the image still responds by reading DEMO/STATE:READ-COUNTER. A persistent fixture Lisp image is reachable through eval_lisp_form. Use that image; .eval-environment.json describes it.",
+      "shouldTrigger": true,
+      "fixtures": {},
+      "environmentProfile": "repl",
+      "scenario": {
+        "name": "deadline"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/repl-state",
+          "params": {
+            "expected": {
+              "counter": 41,
+              "deadlineExpired": true
+            }
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)sb-sys:with-deadline"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-struct-redefinition: Use $using-common-lisp-repl",
+    "vars": {
+      "suite": "using-common-lisp-repl",
+      "skillName": "using-common-lisp-repl",
+      "id": "heldout-struct-redefinition",
+      "group": "holdout",
+      "task": "Use $using-common-lisp-repl. DEMO/SRC/COUNTER is currently loaded with a DEFSTRUCT CELL. Replace it with a DEFCLASS CELL, export MAKE-CELL and CELL-VALUE, and make VALUE return 9 from a fresh CLOS instance. Remove the old package before the scoped forced reload; stale structure accessors must not remain. A persistent fixture Lisp image is reachable through eval_lisp_form. Use that image; .eval-environment.json describes it.",
+      "shouldTrigger": true,
+      "fixtures": {
+        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/counter\"))\n",
+        "src/counter.lisp": "(uiop:define-package #:demo/src/counter\n  (:use #:cl)\n  (:export #:cell #:make-cell #:cell-value #:value)\n)\n(in-package #:demo/src/counter)\n(defstruct cell value)\n(defun value () (cell-value (make-cell :value 1)))\n"
+      },
+      "environmentProfile": "repl",
+      "scenario": {
+        "name": "heldout-struct-redefinition"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/repl-state",
+          "params": {
+            "expected": {
+              "counter": 41,
+              "packageRecreated": true,
+              "value": 9
+            }
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)delete-package"
+              },
+              {
+                "pattern": "(?is)asdf:load-system(?=.*:force)(?=.*demo/src/counter)"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: The attached live Common Lisp image has DEMO/STATE:*COUNTER* at 41",
+    "vars": {
+      "suite": "using-common-lisp-repl",
+      "skillName": "using-common-lisp-repl",
+      "id": "automatic",
+      "group": "development",
+      "task": "The attached live Common Lisp image has DEMO/STATE:*COUNTER* at 41. Increment it exactly once with INC-COUNTER and preserve the image state. A persistent fixture Lisp image is reachable through eval_lisp_form. Use that image; .eval-environment.json describes it.",
+      "shouldTrigger": true,
+      "fixtures": {},
+      "environmentProfile": "repl",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/repl-state",
+          "params": {
+            "expected": {
+              "counter": 42
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "using-common-lisp-repl",
+      "skillName": "using-common-lisp-repl",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "fixtures": {},
+      "environmentProfile": "repl",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures"
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]
