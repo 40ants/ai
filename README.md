@@ -155,21 +155,27 @@ Note: this validator requires `PyYAML` in the active Python environment.
 
 ## Test Skills with Promptfoo
 
-The first behavioral suite is for `writing-common-lisp`. The skill itself is
-unchanged. The suite asks Codex to edit disposable projects through Promptfoo's
+The first behavioral suite is for `writing-common-lisp`. The suite asks Codex to edit disposable projects through Promptfoo's
 native Codex SDK provider, captures its turn and output files, then reads and
 runs the Lisp with SBCL and Serapeum.
+
+The harness is the ASDF system `40ants-ai-evals`, with Roswell entry points.
+[ADR 0001](evals/docs/decisions/0001-common-lisp-with-promptfoo-js-adapter.md)
+records why one thin JavaScript adapter remains at the Promptfoo boundary.
+Its [JSON protocol](evals/docs/adapter-protocol.md) keeps collection and grading in Lisp.
 
 ### 1. Enter the pinned environment
 
 ```bash
 cd /Users/art/projects/lisp/ai
 nix-shell
+qlot install
 ```
 
 `shell.nix` pins nixpkgs by commit and SHA-256, Promptfoo **0.125.1**, Codex
-SDK and CLI **0.156.1**, APM **0.31.0**, Node.js **22.23.4**, and SBCL **2.6.8**
-with Serapeum. `nix/promptfoo/package-lock.json` pins the published npm packages
+SDK and CLI **0.156.1**, APM **0.31.0**, Node.js **22.23.4**, SBCL **2.6.8**, Roswell **26.10.117** and Qlot **1.8.2**.
+`qlfile` and `qlfile.lock` pin project libraries to Quicklisp **2026-01-01**,
+including the same Serapeum release as before the Lisp migration. `nix/promptfoo/package-lock.json` pins the published npm packages
 and their complete dependency graph; Nix also checks the downloaded dependency
 hash. The native provider requires SDK `^0.156.1`, so its matching CLI replaces
 the previous 0.165.0 CLI only inside this shell. The new Promptfoo uses libSQL;
@@ -178,8 +184,12 @@ Silicon macOS. Nix downloads dependencies to its store without installing global
 packages or changing a Homebrew installation/user Nix profile.
 
 The shell uses a PATH made from those Nix packages plus macOS system utilities.
-Homebrew/Roswell executables are excluded, and SBCL user initialization is
-disabled so a personal Quicklisp setup cannot affect results.
+Global/Homebrew executables are excluded. SBCL user initialization is disabled;
+Roswell state, compilation caches and Qlot download caches stay under `.evals/`.
+Libraries are installed under `.qlot/`; personal Quicklisp is not loaded.
+Roswell uses the Nix SBCL and does not install another Lisp implementation.
+Use `qlot install` to restore the lockfile and `qlot update` only for an intentional
+dependency upgrade. Check in both `qlfile` and `qlfile.lock`; do not edit `.qlot/`.
 
 Check the tools yourself:
 
@@ -189,6 +199,9 @@ codex --version
 apm --version
 sbcl --version
 node --version
+ros --version
+qlot --version
+qlot check
 ```
 
 APM's four Promptfoo skills are installed only into this project's
@@ -205,14 +218,18 @@ to discover the installed skills.
 
 ### 2. Understand the three pieces of an eval
 
-Open `evals/writing-common-lisp/promptfooconfig.yaml`:
+Open `evals/writing-common-lisp/promptfooconfig.json`:
 
 - `prompts` selects the user request (`{{task}}`).
 - `providers` uses Promptfoo's built-in `openai:codex-sdk` provider.
 - `copy_working_dir: copy` gives every call/repeat a fresh workspace, retained
   until assertions finish and then removed by Promptfoo.
-- `defaultTest.assert` archives files using `evals/lib/workspace-grade.cjs`,
-  then applies the domain rules in `evals/lib/grade.cjs`.
+- `defaultTest.assert` calls the transport adapter `evals/lib/promptfoo-adapter.cjs`.
+  It sends JSON to `roswell/ai-evals.ros assert`, which archives files in
+  `src/collector.lisp`. The core in `src/checks.lisp` resolves named check plans;
+  independent ASDF systems under `evals/checks/` implement the rules.
+  Real reader/runtime checks execute in a separate process through
+  `roswell/check-lisp.ros`. Promptfoo waits for the assertion before cleanup.
 
 The `Contract` assertion includes `return-type-layout`: every Serapeum `->`
 signature in the tested source must put its return type on a separate line
@@ -241,10 +258,15 @@ authenticate the pinned Codex CLI with `codex login` first.
 ### 3. Calibrate the grader before trusting it
 
 ```bash
-node --test evals/lib/*.test.cjs
-promptfoo validate config -c evals/writing-common-lisp/promptfooconfig.yaml
+qlot exec ros roswell/ai-evals.ros test
+promptfoo validate config -c evals/writing-common-lisp/promptfooconfig.json
 ```
 
+Rove replays 47 frozen inputs (36 original calibration inputs plus one real
+output for each of the 11 scenarios) and checks
+collector/adapter failures, JSON round trips, historical exports, coverage,
+parameter schemas, profile cycles, evidence caching and an independent ASDF
+check extension.
 The calibration suite checks known-good code and intentional defects, including
 wrong arithmetic despite correct style. Passing calibration is evidence about
 the grader, not evidence that the skill passed a real model evaluation.
@@ -252,8 +274,8 @@ the grader, not evidence that the skill passed a real model evaluation.
 ### 4. Run one case, then establish a baseline
 
 ```bash
-node evals/run.mjs run --label smoke --filter package-path
-node evals/run.mjs run --label baseline
+qlot exec ros roswell/ai-evals.ros run --label smoke --filter package-path
+qlot exec ros roswell/ai-evals.ros run --label baseline
 ```
 
 The second command runs all development cases. Exit code zero requires every
@@ -269,8 +291,8 @@ have been removed. For a suspicious routing failure, inspect `turn.json`.
 ### 5. Read the accumulated history
 
 ```bash
-node evals/run.mjs history
-node evals/run.mjs view
+qlot exec ros roswell/ai-evals.ros history
+qlot exec ros roswell/ai-evals.ros view
 ```
 
 The viewer serves the project's persistent Promptfoo database at
@@ -306,15 +328,29 @@ new baseline with the upgraded harness before assessing further skill edits.
 Promptfoo database, if you need history to survive deletion of this checkout or
 a disk failure. Local accumulation is not an off-machine backup.
 
+To regrade archived samples without model calls or replacing original results:
+
+```bash
+qlot exec ros roswell/ai-evals.ros replay RUN_ID
+```
+
+This writes `replay-lisp.json` beside the original run. Historical harness
+snapshots retain their original JS files; active project code uses the Lisp CLI.
+A migration changes the suite hash and recorded tools, so comparisons across
+this boundary require inspecting settings and using `--allow-mismatch` explicitly.
+Establish a fresh baseline for subsequent skill edits. The existing `skill-read`
+check retains its earlier semantics: automatic skill injection by Codex can still
+produce a false negative in Promptfoo's skill-call evidence.
+
 ### 6. Compare a change with any earlier version
 
 ```bash
 # After making one intentional change to SKILL.md:
-node evals/run.mjs run --label candidate
-node evals/run.mjs compare baseline candidate
+qlot exec ros roswell/ai-evals.ros run --label candidate
+qlot exec ros roswell/ai-evals.ros compare baseline candidate
 
 # Or use exact IDs printed by history:
-node evals/run.mjs compare previous latest
+qlot exec ros roswell/ai-evals.ros compare previous latest
 ```
 
 Use unique labels or exact run IDs. Comparison checks that the test suite,
@@ -325,7 +361,7 @@ exploration, `--allow-mismatch` prints the differences explicitly.
 You can evaluate an old skill from **any Git commit** with today's test suite:
 
 ```bash
-node evals/run.mjs run --label historical --ref HEAD
+qlot exec ros roswell/ai-evals.ros run --label historical --ref HEAD
 ```
 
 Replace `HEAD` with a real commit hash or tag from `git log`. The runner extracts
@@ -341,16 +377,16 @@ a skill change; use an exact model snapshot if the provider makes one available.
 
 ```bash
 # Estimate variability: 9 cases × 3 independent samples.
-node evals/run.mjs run --label baseline-repeat --repeat 3
+qlot exec ros roswell/ai-evals.ros run --label baseline-repeat --repeat 3
 
 # Matched control: with and without the skill, on fresh workspaces.
-node evals/run.mjs run --label ablation --ablation
+qlot exec ros roswell/ai-evals.ros run --label ablation --ablation
 
 # Evaluate the held-out scenarios after selecting an instruction change.
-node evals/run.mjs run --label holdout-check --group holdout --repeat 3
+qlot exec ros roswell/ai-evals.ros run --label holdout-check --group holdout --repeat 3
 
 # Or run both development and holdout cases together.
-node evals/run.mjs run --label full --group all
+qlot exec ros roswell/ai-evals.ros run --label full --group all
 ```
 
 In ablation mode, the control receives the same task without an explicit
@@ -366,12 +402,28 @@ reliable per-call USD price here; `costUsd: null` means unknown, not zero.
 The native provider may display an estimated API cost in Promptfoo's UI. That
 estimate is not a charge or a measurement of ChatGPT subscription billing.
 
-### 8. Add a regression case before editing instructions
+### 8. Extend checks without changing the core
+
+Cases declare an ordered `vars.checks` array of named checks and profiles.
+`defaultTest.vars.checkSystems` selects independent ASDF systems that register
+those checks. Typed parameters, missing variables and unknown names are
+validated before model calls. The built-in rules retain their previous scores.
+
+See [Adding independent checks](evals/docs/extending-checks.md) for a complete
+ASDF example and the JSON format, or inspect the runnable example under
+`tests/fixtures/example-check/`. [ADR 0002](evals/docs/decisions/0002-extensible-checks.md)
+records the architecture. List the 28 built-in check schemas with:
+
+```bash
+qlot exec ros roswell/ai-evals.ros checks
+```
+
+### 9. Add a regression case before editing instructions
 
 1. Reproduce a real failure as one entry in `cases.json`.
 2. Write the expected behavior independently of the agent's current output.
 3. Add an objective assertion/functional check and calibrate it with a passing
-   and failing example in `grade.test.cjs`.
+   and failing example in `tests/grading/contracts-test.lisp`.
 4. Run the old skill to record the failure.
 5. Make one targeted skill change, keeping the cases/grader/model fixed.
 6. Rerun with the same repeat count and compare exact run IDs.

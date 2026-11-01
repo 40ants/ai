@@ -4,3 +4,4 @@ apm_modules/
 .agents/skills/promptfoo-*/
 .apm/
 
+.qlot/

@@ -1,46 +1,12 @@
-;;;; Read actual Lisp forms and execute functional checks with real Serapeum.
-(require :asdf)
-(let ((*standard-output* (make-broadcast-stream)))
-  (asdf:load-system "serapeum"))
+;;;; Reader and functional checks run only in a disposable child Lisp process.
+(uiop:define-package #:40ants-ai-evals-common-lisp-checks/lisp-reader
+  (:use #:cl)
+  (:import-from #:serapeum #:-> #:dict)
+  (:export #:inspect-source))
+(in-package #:40ants-ai-evals-common-lisp-checks/lisp-reader)
 
-(defun json-string (text)
-  (write-char #\")
-  (loop for char across text do
-    (case char
-      (#\" (write-string "\\\""))
-      (#\\ (write-string "\\\\"))
-      (#\Newline (write-string "\\n"))
-      (#\Return (write-string "\\r"))
-      (#\Tab (write-string "\\t"))
-      (otherwise
-       (if (< (char-code char) 32)
-           (format t "\\u~4,'0X" (char-code char))
-           (write-char char)))))
-  (write-char #\"))
-
-(defun emit-json (object)
-  (cond
-    ((null object) (write-string "null"))
-    ((stringp object) (json-string object))
-    ((symbolp object)
-     (write-string "{\"s\":")
-     (json-string (string-downcase (symbol-name object)))
-     (write-string ",\"p\":")
-     (if (symbol-package object)
-         (json-string (package-name (symbol-package object)))
-         (write-string "null"))
-     (write-char #\}))
-    ((or (listp object) (vectorp object))
-     (write-char #\[)
-     (loop for value across (coerce object 'vector)
-           for first = t then nil do
-       (unless first (write-char #\,))
-       (emit-json value))
-     (write-char #\]))
-    ((numberp object) (princ object))
-    ((characterp object) (json-string (string object)))
-    (t (json-string (princ-to-string object)))))
-
+(serapeum:-> next-form-start (string integer)
+    (or null integer))
 (defun next-form-start (source start)
   ;; Let the Lisp reader skip real comments, including nested #| ... |#.
   (with-input-from-string (stream source)
@@ -60,6 +26,8 @@
              (return (1- (file-position stream)))))
         (t (return (file-position stream)))))))
 
+(serapeum:-> signature-layout-valid-p (list integer string)
+    boolean)
 (defun signature-layout-valid-p (form start source)
   (let ((*readtable* (copy-readtable nil)))
     (with-input-from-string (stream source)
@@ -75,6 +43,8 @@
         (and (= (length form) 4) return-start
              (string= (subseq source line-start return-start) "    "))))))
 
+(serapeum:-> read-source (string)
+    (values list list &optional))
 (defun read-source (filename)
   (let* ((*read-eval* nil) (*package* (find-package :cl-user))
          (*readtable* (copy-readtable nil))
@@ -107,6 +77,8 @@
              (setf *package* (find-package (second form))))))))
     (values (nreverse forms) (nreverse signature-layouts))))
 
+(serapeum:-> functional-check (string string string)
+    t)
 (defun functional-check (package-name test-name filename)
   (let ((*standard-output* (make-broadcast-stream)))
     (load filename :verbose nil :print nil))
@@ -146,22 +118,30 @@
            (assert (equal (reverse seen) '((:first :object) (:second :object))))))
         (t (error "Unknown functional check: ~A" test-name))))))
 
-(let* ((args (cdr sb-ext:*posix-argv*))
-       (filename (first args))
-       (package-name (second args))
-       (test-name (third args))
-       (forms nil) (signature-layouts nil) (read-error nil) (runtime-error nil))
-  (handler-case (multiple-value-setq (forms signature-layouts) (read-source filename))
-    (error (condition) (setf read-error (princ-to-string condition))))
-  (unless read-error
-    (handler-case (functional-check package-name test-name filename)
-      (error (condition) (setf runtime-error (princ-to-string condition)))))
-  (write-string "EVAL_JSON:")
-  (write-string "{\"forms\":")
-  (emit-json (coerce forms 'vector))
-  (write-string ",\"signatureLayouts\":")
-  (emit-json (coerce signature-layouts 'vector))
-  (write-string ",\"readError\":") (emit-json read-error)
-  (write-string ",\"runtimeError\":") (emit-json runtime-error)
-  (write-string "}")
-  (terpri))
+(serapeum:-> form-json (t)
+    t)
+(defun form-json (object)
+  (cond
+    ((null object) :null)
+    ((stringp object) object)
+    ((symbolp object)
+     (dict "s" (string-downcase (symbol-name object))
+           "p" (if (symbol-package object) (package-name (symbol-package object)) :null)))
+    ((or (listp object) (vectorp object)) (map 'vector #'form-json object))
+    ((numberp object) object)
+    ((characterp object) (string object))
+    (t (princ-to-string object))))
+
+(serapeum:-> inspect-source (string string string)
+    hash-table)
+(defun inspect-source (filename package-name test-name)
+  "Read actual forms and run the named functional check in this child image."
+  (let ((forms nil) (layouts nil) (read-error :null) (runtime-error :null))
+    (handler-case (multiple-value-setq (forms layouts) (read-source filename))
+      (error (condition) (setf read-error (princ-to-string condition))))
+    (when (eq read-error :null)
+      (handler-case (functional-check package-name test-name filename)
+        (error (condition) (setf runtime-error (princ-to-string condition)))))
+    (dict "forms" (map 'vector #'form-json forms)
+          "signatureLayouts" (coerce layouts 'vector)
+          "readError" read-error "runtimeError" runtime-error)))

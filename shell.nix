@@ -40,14 +40,37 @@ let
     dontFixup = true;
   };
 
-  lispRuntime = pkgs.sbcl.withPackages (ps: [ ps.serapeum ]);
+  # Qlot itself is bootstrapped from the same pinned nixpkgs. Application
+  # libraries are resolved exclusively from the project's qlfile.lock.
+  qlotRuntime = pkgs.sbcl.withPackages (ps: [ (ps.qlot.overrideAttrs (old: {
+    systems = [ "qlot" "qlot/cli" ];
+    # The generic Lisp builder removes bundled .asd files. Qlot needs this
+    # one to bootstrap project-local Quicklisp, so restore it after install.
+    postInstall = (old.postInstall or "") + ''
+      cp ${pkgs.sbclPackages.qlot.src}/quicklisp-client/quicklisp/quicklisp.asd \
+        "$out/quicklisp-client/quicklisp/quicklisp.asd"
+    '';
+    preBuild = (old.preBuild or "") + ''
+      export XDG_CACHE_HOME="$TMPDIR/qlot-cache"
+      export XDG_CONFIG_HOME="$TMPDIR/qlot-config"
+      mkdir -p "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME"
+    '';
+  })) ]);
+  qlot = pkgs.writeShellScriptBin "qlot" ''
+    exec ${qlotRuntime}/bin/sbcl --noinform --no-userinit --no-sysinit \
+      --non-interactive --eval '(require :asdf)' \
+      --eval '(asdf:initialize-output-translations `(:output-translations (t (,(uiop:ensure-directory-pathname (uiop:getenv "XDG_CACHE_HOME")) :implementation)) :ignore-inherited-configuration))' \
+      --eval '(asdf:initialize-source-registry `(:source-registry (:directory ,(merge-pathnames ".qlot/quicklisp/" (uiop:getcwd))) :inherit-configuration))' \
+      --eval '(let ((*standard-output* *error-output*)) (asdf:load-system "qlot/cli"))' \
+      --eval '(qlot/cli:main)' -- "$@"
+  '';
   sbcl = pkgs.writeShellScriptBin "sbcl" ''
     case "''${1:-}" in
-      --version|--help) exec ${lispRuntime}/bin/sbcl "$@" ;;
+      --version|--help) exec ${pkgs.sbcl}/bin/sbcl "$@" ;;
     esac
-    exec ${lispRuntime}/bin/sbcl --no-userinit --no-sysinit "$@"
+    exec ${pkgs.sbcl}/bin/sbcl --no-userinit --no-sysinit --load ${./nix/lisp-init.lisp} "$@"
   '';
-  evalTools = [ toolchain pkgs.nodejs_22 sbcl pkgs.git pkgs.ripgrep apm
+  evalTools = [ toolchain pkgs.nodejs_22 sbcl pkgs.roswell qlot pkgs.curl pkgs.openssl pkgs.git pkgs.ripgrep apm
     pkgs.bashInteractive pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.gnused
     pkgs.gnutar pkgs.which ];
 in
@@ -62,7 +85,15 @@ pkgs.mkShell {
     export SHELL="${pkgs.bashInteractive}/bin/bash"
     export PATH="$SKILL_EVAL_TOOL_PATH"
     export PROMPTFOO_CONFIG_DIR="$PWD/.evals/promptfoo"
+    unset CL_SOURCE_REGISTRY ASDF_OUTPUT_TRANSLATIONS QUICKLISP_HOME
+    export XDG_CONFIG_HOME="$PWD/.evals/config"
+    export XDG_DATA_HOME="$PWD/.evals/data"
+    export ROSWELL_HOME="$PWD/.evals/roswell"
+    export XDG_CACHE_HOME="$PWD/.evals/cache"
+    export QLOT_CACHE_DIRECTORY="$PWD/.evals/qlot-cache"
+    export SKILL_EVAL_PROJECT_ROOT="$PWD"
+    export SKILL_EVAL_DEPENDENCY_ROOT="$PWD"
     export APM_CACHE_DIR="$PWD/.evals/apm-cache"
-    echo "Eval tools: promptfoo 0.125.1, Codex SDK/CLI 0.156.1, APM 0.31.0 (pinned Nix store)"
+    echo "Eval tools: promptfoo 0.125.1, Codex SDK/CLI 0.156.1, APM 0.31.0, Roswell ${pkgs.roswell.version}, Qlot ${pkgs.sbclPackages.qlot.version} (pinned Nix store)"
   '';
 }

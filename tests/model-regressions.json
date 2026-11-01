@@ -1,0 +1,279 @@
+[
+  {
+    "case": "package-path",
+    "sample": {
+      "files": {
+        "src/models/score.lisp": ";;;; Score model.\n\n(uiop:define-package #:demo/src/models/score\n  (:use #:cl)\n  (:export #:add-score))\n(in-package #:demo/src/models/score)\n\n(serapeum:-> add-score (integer integer)\n    (values integer &optional))\n(defun add-score (first-score second-score)\n  \"Return the sum of FIRST-SCORE and SECOND-SCORE.\"\n  (+ first-score second-score))\n"
+      },
+      "skillRead": false,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "package-path",
+      "group": "development",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score",
+      "sourceOnly": true
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9473684210526315,
+      "reason": "skill-read"
+    }
+  },
+  {
+    "case": "loop-style",
+    "sample": {
+      "files": {
+        "src/numbers.lisp": "(uiop:define-package #:demo/src/numbers\n  (:use #:cl)\n  (:export #:sum-even))\n(in-package #:demo/src/numbers)\n\n(serapeum:-> sum-even (list)\n    (values integer &optional))\n(defun sum-even (numbers)\n  \"Return the sum of the even integers in NUMBERS, or zero for an empty list.\"\n  (loop for number in numbers\n        when (evenp number)\n          sum number))\n"
+      },
+      "skillRead": true,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "loop-style",
+      "group": "development",
+      "shouldTrigger": true,
+      "file": "src/numbers.lisp",
+      "package": "demo/src/numbers",
+      "function": "sum-even",
+      "runtime": "sum-even",
+      "requireLoop": true
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "19 checks passed"
+    }
+  },
+  {
+    "case": "exhaustive-dispatch",
+    "sample": {
+      "files": {
+        "src/status.lisp": ";;;; HTTP status codes for demo.\n\n(uiop:define-package #:demo/src/status\n  (:use #:cl)\n  (:export #:status-code))\n(in-package #:demo/src/status)\n\n(serapeum:-> status-code (t)\n    (values (member 200 201 404) &optional))\n(defun status-code (kind)\n  \"Return the HTTP status code for KIND, one of :NEW, :OK, or :MISSING.\nSignal an error for any other value.\"\n  (ecase kind\n    (:new 201)\n    (:ok 200)\n    (:missing 404)))\n"
+      },
+      "skillRead": true,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "exhaustive-dispatch",
+      "group": "development",
+      "shouldTrigger": true,
+      "file": "src/status.lisp",
+      "package": "demo/src/status",
+      "function": "status-code",
+      "runtime": "status-code",
+      "requireExhaustive": true,
+      "sourceOnly": true
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "20 checks passed"
+    }
+  },
+  {
+    "case": "formatted-error",
+    "sample": {
+      "files": {
+        "demo.asd": "(asdf:defsystem #:demo\n  :class :package-inferred-system\n  :depends-on (#:demo/src/validation))\n",
+        "src/validation.lisp": ";;;; Validation of numeric inputs.\n\n(uiop:define-package #:demo/src/validation\n  (:use #:cl)\n  (:import-from #:serapeum\n                #:->)\n  (:export #:ensure-positive))\n(in-package #:demo/src/validation)\n\n(-> ensure-positive (real)\n    (values real &optional))\n(defun ensure-positive (value)\n  \"Return VALUE when it is positive; otherwise signal an error that reports VALUE.\"\n  (if (plusp value)\n      value\n      (error \"Expected a positive real number, got ~S\" value)))\n"
+      },
+      "skillRead": true,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "formatted-error",
+      "group": "development",
+      "shouldTrigger": true,
+      "file": "src/validation.lisp",
+      "package": "demo/src/validation",
+      "function": "ensure-positive",
+      "runtime": "ensure-positive",
+      "requireFormattedError": true
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "19 checks passed"
+    }
+  },
+  {
+    "case": "unused-argument",
+    "sample": {
+      "files": {
+        "src/values.lisp": ";;;; Value helper for the demo system.\n\n(uiop:define-package #:demo/src/values\n  (:use #:cl)\n  (:export #:first-value))\n(in-package #:demo/src/values)\n\n(serapeum:-> first-value (t t)\n    (values t &optional))\n(defun first-value (value metadata)\n  \"Return VALUE unchanged, ignoring METADATA.\"\n  (declare (ignore metadata))\n  value)\n"
+      },
+      "skillRead": true,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "unused-argument",
+      "group": "development",
+      "shouldTrigger": true,
+      "file": "src/values.lisp",
+      "package": "demo/src/values",
+      "function": "first-value",
+      "runtime": "first-value",
+      "requireIgnore": "metadata"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "19 checks passed"
+    }
+  },
+  {
+    "case": "hook-contract",
+    "sample": {
+      "files": {
+        "src/hooks.lisp": ";;;; Hooks run after an object is saved.\n\n(uiop:define-package #:demo/src/hooks\n  (:use #:cl)\n  (:export #:*after-save-hooks*\n           #:run-after-save-hooks))\n(in-package #:demo/src/hooks)\n\n(defvar *after-save-hooks* nil\n  \"Functions called with the saved object in list order. Non-function elements are ignored.\")\n\n(serapeum:-> run-after-save-hooks (t)\n    (values null &optional))\n(defun run-after-save-hooks (object)\n  \"Call each function in *AFTER-SAVE-HOOKS* with OBJECT in list order.\nIgnore non-function elements in the list. Return NIL.\"\n  (dolist (hook *after-save-hooks*)\n    (when (functionp hook)\n      (funcall hook object))))\n"
+      },
+      "skillRead": true,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "hook-contract",
+      "group": "development",
+      "shouldTrigger": true,
+      "file": "src/hooks.lisp",
+      "package": "demo/src/hooks",
+      "function": "run-after-save-hooks",
+      "runtime": "hooks",
+      "hook": "*after-save-hooks*"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "20 checks passed"
+    }
+  },
+  {
+    "case": "project-override",
+    "sample": {
+      "files": {
+        "AGENTS.md": "This project deliberately uses CL:DEFPACKAGE, not UIOP:DEFINE-PACKAGE. Preserve full path-based package names. Do not add Serapeum signatures or imports. These project conventions override general skill preferences.\n",
+        "demo.asd": "(asdf:defsystem #:demo\n  :description \"Demo system.\"\n  :components ((:file \"src/legacy\")))\n",
+        "src/legacy.lisp": "(defpackage #:demo/src/legacy\n  (:use #:cl)\n  (:export #:add-score))\n\n(in-package #:demo/src/legacy)\n\n(declaim (ftype (function (integer integer) integer) add-score))\n(defun add-score (left right)\n  \"Return the sum of the integers LEFT and RIGHT.\"\n  (+ left right))\n"
+      },
+      "skillRead": true,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "project-override",
+      "group": "development",
+      "shouldTrigger": true,
+      "fixtures": {
+        "AGENTS.md": "This project deliberately uses CL:DEFPACKAGE, not UIOP:DEFINE-PACKAGE. Preserve full path-based package names. Do not add Serapeum signatures or imports. These project conventions override general skill preferences.\n"
+      },
+      "file": "src/legacy.lisp",
+      "package": "demo/src/legacy",
+      "function": "add-score",
+      "runtime": "add-score",
+      "override": true
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "case": "qlot-boundary",
+    "sample": {
+      "files": {
+        ".qlot/vendor/example.lisp": "(in-package #:cl-user)\n(defun greeting () \"helo\")\n"
+      },
+      "skillRead": false,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "qlot-boundary",
+      "group": "development",
+      "shouldTrigger": true,
+      "fixtures": {
+        ".qlot/vendor/example.lisp": "(in-package #:cl-user)\n(defun greeting () \"helo\")\n"
+      },
+      "protected": ".qlot/vendor/example.lisp",
+      "noChanges": true
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.6666666666666666,
+      "reason": "skill-read"
+    }
+  },
+  {
+    "case": "python-negative",
+    "sample": {
+      "files": {
+        "hello.py": "print(\"hello\")\n"
+      },
+      "skillRead": false,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "python-negative",
+      "group": "development",
+      "shouldTrigger": false,
+      "textFile": "hello.py",
+      "textContains": "hello"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "2 checks passed"
+    }
+  },
+  {
+    "case": "heldout-path",
+    "sample": {
+      "files": {
+        "src/domain/account/balance.lisp": "(uiop:define-package #:ledger/src/domain/account/balance\n  (:use #:cl)\n  (:import-from #:serapeum\n                #:->)\n  (:export #:add-score))\n\n(in-package #:ledger/src/domain/account/balance)\n\n(-> add-score (integer integer)\n    (values integer &optional))\n(defun add-score (first-score second-score)\n  \"Return the sum of FIRST-SCORE and SECOND-SCORE.\"\n  (+ first-score second-score))\n"
+      },
+      "skillRead": true,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "heldout-path",
+      "group": "holdout",
+      "shouldTrigger": true,
+      "file": "src/domain/account/balance.lisp",
+      "package": "ledger/src/domain/account/balance",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "case": "heldout-format",
+    "sample": {
+      "files": {
+        "src/predicates.lisp": ";;;; Predicates for the demo system.\n\n(uiop:define-package #:demo/src/predicates\n  (:use #:cl)\n  (:export #:ready-p))\n(in-package #:demo/src/predicates)\n\n(serapeum:-> ready-p (t)\n    (values boolean &optional))\n(defun ready-p (object)\n  \"Return true if OBJECT is the keyword :READY, and false otherwise.\"\n  (eq object :ready))\n"
+      },
+      "skillRead": true,
+      "variant": "with-skill"
+    },
+    "vars": {
+      "id": "heldout-format",
+      "group": "holdout",
+      "shouldTrigger": true,
+      "file": "src/predicates.lisp",
+      "package": "demo/src/predicates",
+      "function": "ready-p",
+      "runtime": "ready-p"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  }
+]

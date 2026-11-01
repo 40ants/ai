@@ -2,91 +2,236 @@
   {
     "description": "package-path: explicit skill, nested file and public API",
     "vars": {
-      "id": "package-path", "group": "development", "shouldTrigger": true,
+      "id": "package-path",
+      "group": "development",
+      "shouldTrigger": true,
       "task": "Use $writing-common-lisp. In the package-inferred ASDF system demo, create src/models/score.lisp with an exported function add-score accepting two integers and returning their sum. Make the source ready to load; do not create an ASDF system or install dependencies.",
-      "file": "src/models/score.lisp", "package": "demo/src/models/score", "function": "add-score", "runtime": "add-score", "sourceOnly": true
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score",
+      "sourceOnly": true,
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   },
   {
     "description": "loop-style: implicit activation and executable iteration",
     "vars": {
-      "id": "loop-style", "group": "development", "shouldTrigger": true,
+      "id": "loop-style",
+      "group": "development",
+      "shouldTrigger": true,
       "task": "In the package-inferred ASDF system demo, create src/numbers.lisp. Export sum-even, a function taking a list of integers and summing the even values using LOOP. Empty input must return zero. Make the source ready to load; no dependency installation.",
-      "file": "src/numbers.lisp", "package": "demo/src/numbers", "function": "sum-even", "runtime": "sum-even", "requireLoop": true
+      "file": "src/numbers.lisp",
+      "package": "demo/src/numbers",
+      "function": "sum-even",
+      "runtime": "sum-even",
+      "requireLoop": true,
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   },
   {
     "description": "exhaustive-dispatch: known cases and unknown value",
     "vars": {
-      "id": "exhaustive-dispatch", "group": "development", "shouldTrigger": true,
+      "id": "exhaustive-dispatch",
+      "group": "development",
+      "shouldTrigger": true,
       "task": "Use $writing-common-lisp. Create src/status.lisp in package-inferred system demo. Export status-code: :new maps to 201, :ok to 200, :missing to 404. Dispatch must be exhaustive and unknown inputs must signal an error. No ASDF scaffolding or dependency installation.",
-      "file": "src/status.lisp", "package": "demo/src/status", "function": "status-code", "runtime": "status-code", "requireExhaustive": true, "sourceOnly": true
+      "file": "src/status.lisp",
+      "package": "demo/src/status",
+      "function": "status-code",
+      "runtime": "status-code",
+      "requireExhaustive": true,
+      "sourceOnly": true,
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   },
   {
     "description": "formatted-error: diagnostic includes invalid input",
     "vars": {
-      "id": "formatted-error", "group": "development", "shouldTrigger": true,
+      "id": "formatted-error",
+      "group": "development",
+      "shouldTrigger": true,
       "task": "Use $writing-common-lisp. In system demo create src/validation.lisp with an exported ensure-positive function: accept a real number, return it unchanged if positive, otherwise signal an error whose report contains the rejected value. Make it ready to load. Do not install dependencies.",
-      "file": "src/validation.lisp", "package": "demo/src/validation", "function": "ensure-positive", "runtime": "ensure-positive", "requireFormattedError": true
+      "file": "src/validation.lisp",
+      "package": "demo/src/validation",
+      "function": "ensure-positive",
+      "runtime": "ensure-positive",
+      "requireFormattedError": true,
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   },
   {
     "description": "unused-argument: declaration and behavior",
     "vars": {
-      "id": "unused-argument", "group": "development", "shouldTrigger": true,
+      "id": "unused-argument",
+      "group": "development",
+      "shouldTrigger": true,
       "task": "Use $writing-common-lisp. Create src/values.lisp in system demo with an exported first-value(value, metadata) function that returns value unchanged and deliberately ignores metadata. Do not install dependencies.",
-      "file": "src/values.lisp", "package": "demo/src/values", "function": "first-value", "runtime": "first-value", "requireIgnore": "metadata"
+      "file": "src/values.lisp",
+      "package": "demo/src/values",
+      "function": "first-value",
+      "runtime": "first-value",
+      "requireIgnore": "metadata",
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   },
   {
     "description": "hook-contract: public variable documentation and invocation",
     "vars": {
-      "id": "hook-contract", "group": "development", "shouldTrigger": true,
+      "id": "hook-contract",
+      "group": "development",
+      "shouldTrigger": true,
       "task": "Use $writing-common-lisp. Create src/hooks.lisp in package-inferred system demo. Export *after-save-hooks*, initially empty, and run-after-save-hooks, which takes an object and passes it to every function in that list in list order. Ignore non-function elements. Document the public API and this behavior. Do not install dependencies.",
-      "file": "src/hooks.lisp", "package": "demo/src/hooks", "function": "run-after-save-hooks", "runtime": "hooks", "hook": "*after-save-hooks*"
+      "file": "src/hooks.lisp",
+      "package": "demo/src/hooks",
+      "function": "run-after-save-hooks",
+      "runtime": "hooks",
+      "hook": "*after-save-hooks*",
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   },
   {
     "description": "project-override: respect the project's explicit package convention",
     "vars": {
-      "id": "project-override", "group": "development", "shouldTrigger": true,
+      "id": "project-override",
+      "group": "development",
+      "shouldTrigger": true,
       "task": "Use $writing-common-lisp and follow this project's conventions. Create src/legacy.lisp in system demo with an exported add-score function accepting two integers and returning their sum. Make it ready to load. Do not install dependencies.",
-      "fixtures": {"AGENTS.md": "This project deliberately uses CL:DEFPACKAGE, not UIOP:DEFINE-PACKAGE. Preserve full path-based package names. Do not add Serapeum signatures or imports. These project conventions override general skill preferences.\n"},
-      "file": "src/legacy.lisp", "package": "demo/src/legacy", "function": "add-score", "runtime": "add-score", "override": true
+      "fixtures": {
+        "AGENTS.md": "This project deliberately uses CL:DEFPACKAGE, not UIOP:DEFINE-PACKAGE. Preserve full path-based package names. Do not add Serapeum signatures or imports. These project conventions override general skill preferences.\n"
+      },
+      "file": "src/legacy.lisp",
+      "package": "demo/src/legacy",
+      "function": "add-score",
+      "runtime": "add-score",
+      "override": true,
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   },
   {
     "description": "qlot-boundary: protect third-party dependency source",
     "vars": {
-      "id": "qlot-boundary", "group": "development", "shouldTrigger": true,
+      "id": "qlot-boundary",
+      "group": "development",
+      "shouldTrigger": true,
       "task": "Use $writing-common-lisp. Review this Common Lisp project's source and correct any misspelled 'helo' greetings, following the skill's conventions about which files may be edited.",
-      "fixtures": {".qlot/vendor/example.lisp": "(in-package #:cl-user)\n(defun greeting () \"helo\")\n"},
-      "protected": ".qlot/vendor/example.lisp", "noChanges": true
+      "fixtures": {
+        ".qlot/vendor/example.lisp": "(in-package #:cl-user)\n(defun greeting () \"helo\")\n"
+      },
+      "protected": ".qlot/vendor/example.lisp",
+      "noChanges": true,
+      "checks": [
+        {
+          "profile": "common/contract"
+        }
+      ]
     }
   },
   {
     "description": "python-negative: adjacent programming task must not select Lisp skill",
     "vars": {
-      "id": "python-negative", "group": "development", "shouldTrigger": false,
+      "id": "python-negative",
+      "group": "development",
+      "shouldTrigger": false,
       "task": "Create hello.py containing only a print call that prints hello. This is a Python project.",
-      "textFile": "hello.py", "textContains": "hello"
+      "textFile": "hello.py",
+      "textContains": "hello",
+      "checks": [
+        {
+          "profile": "common/contract"
+        }
+      ]
     }
   },
   {
     "description": "heldout-path: another system and deeper path",
     "vars": {
-      "id": "heldout-path", "group": "holdout", "shouldTrigger": true,
+      "id": "heldout-path",
+      "group": "holdout",
+      "shouldTrigger": true,
       "task": "Create src/domain/account/balance.lisp in package-inferred system ledger. Export add-score to add two integer scores. Make the source ready to load; no ASDF scaffolding or dependency installation.",
-      "file": "src/domain/account/balance.lisp", "package": "ledger/src/domain/account/balance", "function": "add-score", "runtime": "add-score"
+      "file": "src/domain/account/balance.lisp",
+      "package": "ledger/src/domain/account/balance",
+      "function": "add-score",
+      "runtime": "add-score",
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   },
   {
     "description": "heldout-format: predicate naming and a public contract",
     "vars": {
-      "id": "heldout-format", "group": "holdout", "shouldTrigger": true,
+      "id": "heldout-format",
+      "group": "holdout",
+      "shouldTrigger": true,
       "task": "Use $writing-common-lisp. Create src/predicates.lisp in package-inferred system demo. Export ready-p, taking any object and returning true only when it is the keyword :ready. Include a public docstring. Do not install dependencies.",
-      "file": "src/predicates.lisp", "package": "demo/src/predicates", "function": "ready-p", "runtime": "ready-p"
+      "file": "src/predicates.lisp",
+      "package": "demo/src/predicates",
+      "function": "ready-p",
+      "runtime": "ready-p",
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source"
+        }
+      ]
     }
   }
 ]

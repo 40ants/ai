@@ -1,0 +1,574 @@
+[
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (- a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "functional:The assertion (= 12 (FUNCALL (FN \"ADD-SCORE\") 5 7)) failed with\n(FUNCALL (FN \"ADD-SCORE\") 5 7) = -2."
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.8333333333333334,
+      "reason": "functional:The name NIL does not designate any package.; full-package-path; in-package"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(defpackage #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.7222222222222222,
+      "reason": "package-declaration; full-package-path; uninterned-package-name; namespace-hygiene; public-export"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n; -> add-score\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.8888888888888888,
+      "reason": "type-signature; return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "public-export"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "public-docstring"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":false,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "skill-read"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\",\"demo.asd\":\"(asdf:defsystem \\\"demo\\\")\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\",\"demo.asd\":\"(asdf:defsystem \\\"demo\\\")\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score",
+      "sourceOnly": true
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9473684210526315,
+      "reason": "scope"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(defpackage #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score",
+      "override": true
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "17 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\".qlot/vendor/x.lisp\":\"(print \\\"helo\\\")\"}}",
+    "vars": {
+      "shouldTrigger": true,
+      "protected": ".qlot/vendor/x.lisp",
+      "noChanges": true,
+      "fixtures": {
+        ".qlot/vendor/x.lisp": "(print \"helo\")"
+      }
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "3 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\".qlot/vendor/x.lisp\":\"(print \\\"hello\\\")\"}}",
+    "vars": {
+      "shouldTrigger": true,
+      "protected": ".qlot/vendor/x.lisp",
+      "noChanges": true,
+      "fixtures": {
+        ".qlot/vendor/x.lisp": "(print \"helo\")"
+      }
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.3333333333333333,
+      "reason": "preserved:.qlot/vendor/x.lisp; no-changes"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":false,\"files\":{\"hello.py\":\"print(\\\"hello\\\")\"}}",
+    "vars": {
+      "shouldTrigger": false,
+      "textFile": "hello.py",
+      "textContains": "hello"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "2 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"hello.py\":\"print(\\\"hello\\\")\"}}",
+    "vars": {
+      "shouldTrigger": false,
+      "textFile": "hello.py",
+      "textContains": "hello"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.5,
+      "reason": "skill-read"
+    }
+  },
+  {
+    "sample": "not json",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0,
+      "reason": "Provider returned malformed evidence JSON"
+    }
+  },
+  {
+    "sample": "{}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0,
+      "reason": "Missing files/skill-read evidence"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer) (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n(values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n  (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n   (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n     (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n        (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n\\t(values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.8888888888888888,
+      "reason": "no-tabs; return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(serapeum:-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(serapeum:-> add-score (integer integer)\\n    integer)\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\"(cl:defpackage #:signature-alias (:use) (:import-from #:serapeum #:->) (:export #:->))\\n;;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(signature-alias:-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\"; Example:\\n; (-> add-score (integer integer)\\n;     (values integer &optional))\\n;;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer) (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\"#| Example #| nested comment |#\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n|#\\n;;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer) (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer) (values integer &optional))\\n(defun add-score (a b)\\n  \\\"(-> add-score (integer integer)\\n    (values integer &optional))\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score ((integer * *)\\n                 integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer) ; argument types\\n  #| nested #| comment |# |#\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer) ; argument types\\n  #| nested #| comment |# |#\\n  (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\\n(serapeum:-> default-score ()\\n    (values integer &optional))\\n(defun default-score () 0)\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Scores.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\\n(serapeum:-> default-score () (values integer &optional))\\n(defun default-score () 0)\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "return-type-layout"
+    }
+  },
+  {
+    "sample": "{\"variant\":\"with-skill\",\"skillRead\":true,\"files\":{\"src/models/score.lisp\":\";;;; Суммы 🧮.\\n(uiop:define-package #:demo/src/models/score\\n  (:use #:cl)\\n  (:import-from #:serapeum #:->)\\n  (:export #:add-score))\\n(in-package #:demo/src/models/score)\\n\\n(-> add-score (integer integer)\\n    (values integer &optional))\\n(defun add-score (a b)\\n  \\\"Return the sum of the two integer scores.\\\"\\n  (+ a b))\\n\"}}",
+    "vars": {
+      "id": "package-path",
+      "shouldTrigger": true,
+      "file": "src/models/score.lisp",
+      "package": "demo/src/models/score",
+      "function": "add-score",
+      "runtime": "add-score"
+    },
+    "expected": {
+      "pass": true,
+      "score": 1,
+      "reason": "18 checks passed"
+    }
+  }
+]

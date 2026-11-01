@@ -1,0 +1,39 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- "$0" "$@"
+|#
+(require :asdf)
+(let* ((script (or *load-truename* *compile-file-truename*))
+       (root (uiop:pathname-parent-directory-pathname
+              (uiop:pathname-directory-pathname script))))
+  (let ((*standard-output* *error-output*) (*trace-output* *error-output*))
+    (asdf:initialize-source-registry
+     `(:source-registry (:directory ,root) :ignore-inherited-configuration))
+    (load (merge-pathnames ".qlot/setup.lisp"
+            (uiop:ensure-directory-pathname
+              (or (uiop:getenv "SKILL_EVAL_DEPENDENCY_ROOT") root)))
+          :verbose nil :print nil)
+    (asdf:load-asd (merge-pathnames "40ants-ai-evals.asd" root))
+    (asdf:load-system "40ants-ai-evals")))
+
+(40ants-ai-evals/src/checks:load-check-systems
+ (vector (serapeum:dict "system" "40ants-ai-evals-common-lisp-checks"
+                        "asd"
+                        "evals/checks/writing-common-lisp/40ants-ai-evals-common-lisp-checks.asd")))
+
+(uiop:define-package #:40ants-ai-evals/roswell/check-lisp
+  (:use #:cl))
+(in-package #:40ants-ai-evals/roswell/check-lisp)
+
+(serapeum:-> main (string string string)
+    t)
+(defun main (filename package-name test-name)
+  ;; A process deadline cannot be swallowed by a candidate's ERROR handler.
+  (let ((deadline (sb-ext:make-timer (lambda () (sb-ext:exit :code 124 :abort t)))))
+    (sb-ext:schedule-timer deadline 18)
+    (unwind-protect
+         (let ((evidence (40ants-ai-evals-common-lisp-checks/lisp-reader:inspect-source
+                          filename package-name test-name)))
+           (format t "EVAL_JSON:~A~%" (40ants-ai-evals/src/util:encode evidence)))
+      (sb-ext:unschedule-timer deadline))))

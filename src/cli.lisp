@@ -1,0 +1,122 @@
+;;;; Thin command dispatch shared by the Roswell entry point and tests.
+(uiop:define-package #:40ants-ai-evals/src/cli
+  (:use #:cl)
+  (:import-from #:serapeum #:->)
+  (:import-from #:40ants-ai-evals/src/util #:decode #:encode #:field #:root #:at)
+  (:export #:main))
+(in-package #:40ants-ai-evals/src/cli)
+
+(-> parse-arguments (list)
+    (values hash-table list &optional))
+(defun parse-arguments (arguments)
+  (let ((flags (make-hash-table :test 'equal)) (positional nil))
+    (loop while arguments for argument = (pop arguments) do
+      (if (uiop:string-prefix-p "--" argument)
+          (let* ((key (subseq argument 2))
+                 (boolean (member key '("ablation" "allow-mismatch") :test #'equal)))
+            (when (gethash key flags) (error "Duplicate option: ~A" argument))
+            (when (and (not boolean)
+                       (or (not arguments) (uiop:string-prefix-p "--" (first arguments))))
+              (error "Missing value for ~A" argument))
+            (setf (gethash key flags) (if boolean t (pop arguments))))
+          (push argument positional)))
+    (values flags (nreverse positional))))
+
+(-> require-arguments (hash-table list list integer integer)
+    t)
+(defun require-arguments (flags positional allowed minimum maximum)
+  (unless (<= minimum (length positional) maximum)
+    (error "Expected ~D..~D arguments, got ~D" minimum maximum (length positional)))
+  (maphash (lambda (key value)
+             (declare (ignore value))
+             (unless (member key allowed :test #'equal) (error "Unknown option --~A" key))) flags))
+
+(-> help ()
+    t)
+(defun help ()
+  (format t "From the project nix-shell, after qlot install:~%~%")
+  (dolist (command '("test" "run --label baseline" "run --filter package-path"
+                     "run --group all --repeat 3" "run --ablation" "run --ref HEAD"
+                     "checks" "history" "compare BEFORE AFTER" "replay RUN_ID_OR_DIRECTORY" "view"))
+    (format t "  qlot exec ros roswell/ai-evals.ros ~A~%" command)))
+
+(-> dispatch (string hash-table list)
+    integer)
+(defun dispatch (command flags positional)
+  (cond
+    ((equal command "assert")
+     (require-arguments flags positional nil 0 0)
+     (write-line (encode (40ants-ai-evals/src/collector:collect-and-grade
+                         (decode *standard-input*))))
+     0)
+    ((equal command "grade")
+     (require-arguments flags positional nil 0 0)
+     (let ((request (decode *standard-input*)))
+       (write-line (encode (40ants-ai-evals/src/grading/contracts:grade
+                            (field request "sample")
+                            (40ants-ai-evals/src/runner:grading-vars (field request "vars"))))))
+     0)
+    ((equal command "test")
+     (require-arguments flags positional nil 0 0)
+     (40ants-ai-evals/src/checks:load-check-systems
+      (field (40ants-ai-evals/src/runner:grading-vars (serapeum:dict)) "checkSystems"))
+     (asdf:test-system "40ants-ai-evals")
+     0)
+    ((equal command "checks")
+     (require-arguments flags positional nil 0 0)
+     (40ants-ai-evals/src/checks:load-check-systems
+      (field (40ants-ai-evals/src/runner:grading-vars (serapeum:dict)) "checkSystems"))
+     (write-line (encode (40ants-ai-evals/src/checks:describe-checks)))
+     0)
+    ((equal command "run")
+     (when positional (error "Unexpected run arguments: ~A" positional))
+     (40ants-ai-evals/src/runner:run-eval flags))
+    ((equal command "history")
+     (require-arguments flags positional nil 0 0)
+     (40ants-ai-evals/src/history:print-history)
+     0)
+    ((equal command "compare")
+     (require-arguments flags positional '("allow-mismatch") 0 2)
+     (40ants-ai-evals/src/history:compare-runs
+      (40ants-ai-evals/src/history:find-run (or (first positional) "previous"))
+      (40ants-ai-evals/src/history:find-run (or (second positional) "latest"))
+      :allow-mismatch (gethash "allow-mismatch" flags))
+     0)
+    ((equal command "replay")
+     (require-arguments flags positional nil 1 1)
+     (let* ((argument (first positional))
+            (run (unless (uiop:directory-exists-p argument)
+                   (40ants-ai-evals/src/history:find-run argument)))
+            (dir (if run (at (root) (format nil ".evals/runs/~A/" (field run "id")))
+                     (uiop:ensure-absolute-pathname argument)))
+            (result (40ants-ai-evals/src/runner:replay-run dir)))
+       (format t "Regraded ~D samples; report: ~A~%" (length (field result "samples"))
+               (at dir "replay-lisp.json")))
+     0)
+    ((equal command "view")
+     (require-arguments flags positional nil 0 0)
+     (let ((process (uiop:launch-program
+                     (list "env" (format nil "PROMPTFOO_CONFIG_DIR=~A"
+                                         (at (root) ".evals/promptfoo/"))
+                           "promptfoo" "view" "--port" "15500" "--no")
+                     :directory (root) :input :interactive :output :interactive
+                     :error-output :interactive)))
+       (uiop:wait-process process)))
+    ((member command '("help" "--help") :test #'equal)
+     (help) 0)
+    (t (error "Unknown command: ~A" command))))
+
+(-> main (list)
+    integer)
+(defun main (arguments)
+  "Run the CLI, keeping machine-readable stdout clean for protocol commands."
+  ;; Qlot exec prepends its own helper directories. Resolve eval executables
+  ;; from the Nix toolchain even when invoked through that environment.
+  (when (uiop:getenv "SKILL_EVAL_TOOL_PATH")
+    (setf (uiop:getenv "PATH") (uiop:getenv "SKILL_EVAL_TOOL_PATH")))
+  (handler-case
+      (multiple-value-bind (flags positional) (parse-arguments (rest arguments))
+        (dispatch (or (first arguments) "help") flags positional))
+    (error (condition)
+      (format *error-output* "ai-evals: ~A~%" condition)
+      2)))
