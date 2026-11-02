@@ -8,9 +8,7 @@
       "group": "development",
       "task": "Use $defining-clos-classes. Create class SESSION in src/session.lisp with required project-dir and optional state default NIL. Export MAKE-SESSION, SESSION-PROJECT-DIR, SESSION-STATE. Constructor hides MAKE-INSTANCE and forwards optional keys without copying defaults.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/session.lisp": "(uiop:define-package #:demo/src/session\n  (:use #:cl)\n)\n(in-package #:demo/src/session)\n\n"
-      },
+      "fixtures": "cases/smoke/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "smoke"
@@ -26,7 +24,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -38,7 +37,7 @@
               "src/session.lisp"
             ],
             "systems": [],
-            "assertions": "(let* ((a (demo/src/session:make-session \"/tmp/a\"))\n(b (demo/src/session:make-session \"/tmp/b\" :state :ready)))\n(assert (typep a 'standard-object))\n(assert (null (demo/src/session:session-state a)))\n(assert (eq :ready (demo/src/session:session-state b)))\n(assert (string= \"/tmp/b\" (demo/src/session:session-project-dir b))))\n(let* ((form (definition \"src/session.lisp\" \"defun\" \"make-session\")) (args (third form)))\n(assert (member '&rest args)) (assert (member '&key args))\n(assert (member 'demo/src/session::state args))\n(assert (some (lambda (node) (op-p node \"apply\")) (nodes form))))"
+            "assertionsFile": "cases/smoke/assertions.lisp"
           }
         }
       ]
@@ -53,9 +52,7 @@
       "group": "development",
       "task": "Use $defining-clos-classes. Create SESSION and MAKE-SESSION(project-dir,&key owner) in src/session.lisp. OWNER is an optional string defaulting to NIL, declared with a precise compatible CLOS type. Export constructor and SESSION-OWNER.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/session.lisp": "(uiop:define-package #:demo/src/session\n  (:use #:cl)\n)\n(in-package #:demo/src/session)\n\n"
-      },
+      "fixtures": "cases/optional-string/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "optional-string"
@@ -71,7 +68,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -83,7 +81,7 @@
               "src/session.lisp"
             ],
             "systems": [],
-            "assertions": "(locally (declare (optimize (safety 3) (debug 3)))\n(let ((a (demo/src/session:make-session \"a\"))\n(b (demo/src/session:make-session \"b\" :owner \"Ada\"))\n(c (demo/src/session:make-session \"c\" :owner nil)))\n(assert (null (demo/src/session:session-owner a)))\n(assert (string= \"Ada\" (demo/src/session:session-owner b)))\n(assert (null (demo/src/session:session-owner c)))))\n(let* ((class (find-class 'demo/src/session::session))\n       (slots (progn (sb-mop:finalize-inheritance class) (sb-mop:class-slots class)))\n       (slot (find \"OWNER\" slots :test #'string= :key (lambda (slot) (symbol-name (sb-mop:slot-definition-name slot)))))\n       (type (and slot (sb-mop:slot-definition-type slot))))\n  (assert slot) (assert (subtypep type '(or null string)))\n  (assert (typep nil type)) (assert (typep \"Ada\" type)))"
+            "assertionsFile": "cases/optional-string/assertions.lisp"
           }
         }
       ]
@@ -98,9 +96,7 @@
       "group": "development",
       "task": "Use $defining-clos-classes. Add optional TIMEOUT slot default 30 to existing SESSION and expose SESSION-TIMEOUT. Accept :timeout in MAKE-SESSION while preserving its forwarding constructor body and STATE default.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/session.lisp": "(uiop:define-package #:demo/src/session\n  (:use #:cl)\n  (:export #:session #:make-session #:session-state #:session-timeout)\n)\n(in-package #:demo/src/session)\n(defclass session () ((project-dir :initarg :project-dir :reader session-project-dir)\n(state :initarg :state :initform :idle :accessor session-state)))\n(defun make-session (project-dir &rest restargs &key state)\n(declare (ignore state)) (apply #'make-instance 'session :project-dir project-dir restargs))\n"
-      },
+      "fixtures": "cases/add-slot/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "add-slot"
@@ -116,7 +112,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -128,7 +125,7 @@
               "src/session.lisp"
             ],
             "systems": [],
-            "assertions": "(let ((a (demo/src/session:make-session \"a\"))\n(b (demo/src/session:make-session \"b\" :timeout 0 :state nil)))\n(assert (= 30 (demo/src/session:session-timeout a)))\n(assert (eq :idle (demo/src/session:session-state a)))\n(assert (= 0 (demo/src/session:session-timeout b)))\n(assert (null (demo/src/session:session-state b))))"
+            "assertionsFile": "cases/add-slot/assertions.lisp"
           }
         }
       ]
@@ -143,9 +140,7 @@
       "group": "holdout",
       "task": "Use $defining-clos-classes. Create QUEUE with a required name and optional ITEMS default (make-array 0 :adjustable t :fill-pointer 0). Export MAKE-QUEUE and QUEUE-ITEMS from src/session.lisp. Each omitted default must create its own vector; an explicitly supplied vector must be preserved.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/session.lisp": "(uiop:define-package #:demo/src/session\n  (:use #:cl)\n)\n(in-package #:demo/src/session)\n\n"
-      },
+      "fixtures": "cases/heldout-instance-default/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "heldout-instance-default"
@@ -161,7 +156,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -173,7 +169,7 @@
               "src/session.lisp"
             ],
             "systems": [],
-            "assertions": "(let* ((a (demo/src/session:make-queue \"a\"))\n(b (demo/src/session:make-queue \"b\")) (v (vector 8))\n(c (demo/src/session:make-queue \"c\" :items v)))\n(assert (not (eq (demo/src/session:queue-items a) (demo/src/session:queue-items b))))\n(vector-push-extend 3 (demo/src/session:queue-items a))\n(assert (zerop (length (demo/src/session:queue-items b))))\n(assert (eq v (demo/src/session:queue-items c))))"
+            "assertionsFile": "cases/heldout-instance-default/assertions.lisp"
           }
         }
       ]
@@ -188,9 +184,7 @@
       "group": "development",
       "task": "Create class SESSION in src/session.lisp with required project-dir and optional state default NIL. Export MAKE-SESSION, SESSION-PROJECT-DIR, SESSION-STATE. Constructor hides MAKE-INSTANCE and forwards optional keys without copying defaults.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/session.lisp": "(uiop:define-package #:demo/src/session\n  (:use #:cl)\n)\n(in-package #:demo/src/session)\n\n"
-      },
+      "fixtures": "cases/automatic/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "automatic"
@@ -206,7 +200,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -218,7 +213,7 @@
               "src/session.lisp"
             ],
             "systems": [],
-            "assertions": "(let* ((a (demo/src/session:make-session \"/tmp/a\"))\n(b (demo/src/session:make-session \"/tmp/b\" :state :ready)))\n(assert (typep a 'standard-object))\n(assert (null (demo/src/session:session-state a)))\n(assert (eq :ready (demo/src/session:session-state b)))\n(assert (string= \"/tmp/b\" (demo/src/session:session-project-dir b))))\n(let* ((form (definition \"src/session.lisp\" \"defun\" \"make-session\")) (args (third form)))\n(assert (member '&rest args)) (assert (member '&key args))\n(assert (member 'demo/src/session::state args))\n(assert (some (lambda (node) (op-p node \"apply\")) (nodes form))))"
+            "assertionsFile": "cases/automatic/assertions.lisp"
           }
         }
       ]
@@ -233,7 +228,6 @@
       "group": "development",
       "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
       "shouldTrigger": false,
-      "fixtures": {},
       "environmentProfile": "lisp",
       "scenario": {
         "name": "negative"
@@ -249,7 +243,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }

@@ -1,11 +1,13 @@
 ;;;; Generic checks supplied as an extension, not wired into the grading engine.
 (uiop:define-package #:40ants-ai-evals-common-checks/checks
   (:use #:cl)
+  (:import-from #:40ants-ai-evals/case-resources
+                #:baseline-manifest #:sample-manifest #:metadata-equal-p #:manifest-equal-p)
   (:import-from #:serapeum #:-> #:dict)
   (:import-from #:40ants-ai-evals/util
                 #:field #:true-p #:json-equal-p #:sequence-list)
   (:import-from #:40ants-ai-evals/checks
-                #:register-check #:register-profile #:context-sample #:outcome))
+                #:register-check #:register-profile #:context-sample #:context-vars #:outcome))
 (in-package #:40ants-ai-evals-common-checks/checks)
 
 (-> source (hash-table hash-table)
@@ -25,19 +27,20 @@
 (-> preserved (hash-table hash-table)
     vector)
 (defun preserved (context params)
-  (let ((results nil) (files (field (context-sample context) "files")))
-    (maphash (lambda (file content)
+  (let ((results nil) (files (sample-manifest (context-sample context))))
+    (maphash (lambda (file metadata)
                (when (or (equal file "AGENTS.md") (equal file (field params "protected")))
                  (push (outcome (format nil "preserved:~A" file)
-                                (equal content (field files file))) results)))
-             (field params "fixtures"))
+                                (metadata-equal-p metadata (field files file))) results)))
+             (baseline-manifest (context-vars context) (field params "fixtures")))
     (coerce (nreverse results) 'vector)))
 
 (-> no-changes (hash-table hash-table)
     hash-table)
 (defun no-changes (context params)
-  (outcome "no-changes" (json-equal-p (field (context-sample context) "files")
-                                     (field params "fixtures"))))
+  (outcome "no-changes"
+           (manifest-equal-p (baseline-manifest (context-vars context) (field params "fixtures"))
+                             (sample-manifest (context-sample context)))))
 
 (-> text-contains (hash-table hash-table)
     hash-table)
@@ -54,10 +57,11 @@
     t)
 (defun source-scope (context params)
   (when (source context params)
-    (outcome "scope"
-             (loop for file being the hash-keys of (field (context-sample context) "files")
-                   always (or (equal file (field params "file"))
-                              (nth-value 1 (gethash file (field params "fixtures"))))))))
+    (let ((baseline (baseline-manifest (context-vars context) (field params "fixtures"))))
+      (outcome "scope"
+               (loop for file being the hash-keys of (sample-manifest (context-sample context))
+                     always (or (equal file (field params "file"))
+                                (nth-value 1 (gethash file baseline))))))))
 
 (-> no-tabs (hash-table hash-table)
     t)
@@ -84,15 +88,15 @@
 
 (register-check "agent/skill-read" 'skill-read :parameters (dict "expected" "boolean"))
 (register-check "files/preserved" 'preserved
-                :parameters (dict "fixtures" "object" "protected" "nullable-string")
+                :parameters (dict "fixtures" "any" "protected" "nullable-string")
                 :defaults (dict "fixtures" (dict) "protected" :null))
-(register-check "files/no-changes" 'no-changes :parameters (dict "fixtures" "object")
+(register-check "files/no-changes" 'no-changes :parameters (dict "fixtures" "any")
                 :defaults (dict "fixtures" (dict)))
 (register-check "files/text-contains" 'text-contains
                 :parameters (dict "file" "string" "contains" "string"))
 (register-check "source/target-file" 'target-file :parameters (dict "file" "string"))
 (register-check "source/scope" 'source-scope
-                :parameters (dict "file" "string" "fixtures" "object")
+                :parameters (dict "file" "string" "fixtures" "any")
                 :defaults (dict "fixtures" (dict)))
 (register-check "source/no-tabs" 'no-tabs :parameters (dict "file" "string"))
 (register-check "source/max-line-length" 'line-length

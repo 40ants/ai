@@ -1,6 +1,7 @@
 ;;;; Archive native workspace evidence before Promptfoo disposes of it.
 (uiop:define-package #:40ants-ai-evals/collector
   (:use #:cl)
+  (:import-from #:40ants-ai-evals/case-resources)
   (:import-from #:serapeum #:-> #:dict)
   (:import-from #:babel)
   (:import-from #:40ants-ai-evals/util
@@ -51,7 +52,8 @@
                                   (babel:octets-to-string bytes :encoding :utf-8 :errorp t)
                                 (error () nil))))
                       (metadata (dict "kind" (cond (png "png") (text "text") (t "binary"))
-                                      "size" size "sha256" (digest-file path))))
+                                      "size" size "sha256" (digest-file path)
+                                      "executableBits" (logand #o111 (sb-posix:stat-mode (sb-posix:lstat path))))))
                  (when png
                    (flet ((uint32 (start)
                             (loop for index from start below (+ start 4)
@@ -73,7 +75,9 @@
                      (ensure-directories-exist target)
                      (with-open-file (stream target :direction :output :if-exists :supersede
                                                     :element-type '(unsigned-byte 8))
-                       (write-sequence bytes stream)))))))
+                       (write-sequence bytes stream))
+                     (sb-posix:chmod (namestring target)
+                                     (logior #o600 (field metadata "executableBits"))))))))
       (visit workspace))
     (values files artifacts)))
 
@@ -81,33 +85,30 @@
     boolean)
 (defun product-evidence-path-p (path)
   "Exclude generated harness state from the candidate's change inventory."
-  (not (or (member path '(".eval-fixture.json" ".eval-environment.json"
-                         ".eval-cache-before.json" "opencode.json"
-                         ".eval-evidence" ".eval-cache") :test #'equal)
-           (uiop:string-prefix-p ".eval-evidence/" path)
-           (uiop:string-prefix-p ".eval-cache/" path)
-           (some (lambda (part) (member part '(".git" ".agents" ".opencode") :test #'equal))
-                 (uiop:split-string path :separator "/")))))
+  (40ants-ai-evals/case-resources:product-path-p path))
 
 (-> sample-changes (hash-table hash-table t)
     vector)
-(defun sample-changes (files artifacts fixtures)
-  "Compare the plain-text fixture baseline with all surviving candidate artifacts."
-  (let ((baseline (if (hash-table-p fixtures) fixtures (dict)))
-        (paths (make-hash-table :test 'equal))
-        (changes nil))
-    (dolist (table (list baseline files artifacts))
+(defun sample-changes (files artifacts baseline)
+  "Compare frozen regular-file manifests, including binary bytes and executable bits."
+  ;; Preserve direct callers using historical inline text fixtures.
+  (let* ((baseline (if (and (hash-table-p baseline)
+                            (loop for value being the hash-values of baseline always (stringp value)))
+                       (40ants-ai-evals/case-resources:fixture-manifest (dict "fixtures" baseline))
+                       (or baseline (dict))))
+         (after (40ants-ai-evals/case-resources:sample-manifest
+                 (dict "files" files "artifacts" artifacts)))
+         (paths (dict)) (changes nil))
+    (dolist (table (list baseline after))
       (maphash (lambda (path value)
                  (declare (ignore value))
                  (when (product-evidence-path-p path) (setf (gethash path paths) t))) table))
-    (dolist (path (sort (loop for path being the hash-keys of paths collect path) #'string<))
-      (multiple-value-bind (before existed-before) (gethash path baseline)
-        (multiple-value-bind (after text-after) (gethash path files)
-          (let* ((exists-after (or text-after (nth-value 1 (gethash path artifacts))))
-                 (status (cond ((not existed-before) "added")
-                               ((not exists-after) "deleted")
-                               ((not (and text-after (equal before after))) "modified"))))
-            (when status (push (dict "path" path "status" status) changes))))))
+    (dolist (path (sort (loop for key being the hash-keys of paths collect key) #'string<))
+      (let ((status (cond ((not (nth-value 1 (gethash path baseline))) "added")
+                          ((not (nth-value 1 (gethash path after))) "deleted")
+                          ((not (40ants-ai-evals/case-resources:metadata-equal-p
+                                 (field baseline path) (field after path))) "modified"))))
+        (when status (push (dict "path" path "status" status) changes))))
     (coerce (nreverse changes) 'vector)))
 
 (-> normalized-tool-call (hash-table)
@@ -260,7 +261,7 @@
           (let ((sample (copy-hash-table* statistics)))
             (multiple-value-bind (files artifacts)
                 (collect-files (uiop:ensure-directory-pathname workspace) artifact-dir)
-              (let ((changes (sample-changes files artifacts (field vars "fixtures"))))
+              (let ((changes (sample-changes files artifacts (40ants-ai-evals/case-resources:baseline-manifest vars))))
                 (setf (gethash "files" sample) files
                       (gethash "artifacts" sample) artifacts
                       (gethash "changes" sample) changes
@@ -275,7 +276,7 @@
                     (when blocked (error "MCP environment approval policy rejected the tool: ~A" blocked)))
                   (when (and (stringp failure) (plusp (length failure)))
                     (error "Provider failed: ~A" failure))
-                  (let ((result (grade sample vars)))
+                  (let ((result (grade sample vars :sample-directory artifact-dir)))
                     (write-json (at artifact-dir "grading.json") result)
                     (dict "protocolVersion" 1 "grading" result "sample" statistics)))
               (error (condition)

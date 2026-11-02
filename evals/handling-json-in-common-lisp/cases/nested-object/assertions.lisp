@@ -1,0 +1,7 @@
+(let ((object (demo/src/json:make-response "Ada" 7)))
+  (assert (hash-table-p object))
+  (assert (string= "Ada" (gethash "name" (gethash "user" object))))
+  (assert (= 7 (gethash "count" object)))
+  (assert (eq :null (gethash "cursor" object)))
+  (assert (hash-table-p (yason:parse (yason:with-output-to-string* ()
+                                       (yason:encode object))))))

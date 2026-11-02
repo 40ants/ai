@@ -1,0 +1,6 @@
+(let ((a (demo/src/session:make-session "a"))
+      (b (demo/src/session:make-session "b" :timeout 0 :state nil)))
+  (assert (= 30 (demo/src/session:session-timeout a)))
+  (assert (eq :idle (demo/src/session:session-state a)))
+  (assert (= 0 (demo/src/session:session-timeout b)))
+  (assert (null (demo/src/session:session-state b))))

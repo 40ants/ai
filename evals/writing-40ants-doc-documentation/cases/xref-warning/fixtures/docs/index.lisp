@@ -1,0 +1,10 @@
+(uiop:define-package #:demo-docs/index
+  (:use #:cl)
+  (:import-from #:40ants-doc #:defsection #:defsection-copy)
+  (:export #:@index #:@readme)
+)
+(in-package #:demo-docs/index)
+(40ants-doc:defsection @index (:title "Demo")
+  (demo system)
+  "A deterministic queue for background jobs. Use the REPL and API for inspection.")
+(40ants-doc:defsection-copy @readme @index)

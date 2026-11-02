@@ -1,6 +1,7 @@
 ;;;; Extension API: named checks, profiles, typed parameters and shared evidence.
 (uiop:define-package #:40ants-ai-evals/checks
   (:use #:cl)
+  (:import-from #:40ants-ai-evals/case-resources #:resolve-resource)
   (:import-from #:asdf)
   (:import-from #:yason)
   (:import-from #:serapeum #:-> #:dict)
@@ -27,20 +28,23 @@
     result))
 
 (-> register-check (string symbol &key (:parameters hash-table) (:defaults hash-table)
-                                    (:validate (or null symbol)))
+                                    (:validate (or null symbol)) (:optional-parameters list))
     string)
-(defun register-check (id handler &key (parameters (dict)) (defaults (dict)) validate)
-  "Register HANDLER(context, parameters), with required typed parameters and defaults."
+(defun register-check (id handler &key (parameters (dict)) (defaults (dict)) validate optional-parameters)
+  "Register HANDLER(context, parameters), typed parameters, defaults and optional fields."
   (unless (and (plusp (length id)) (fboundp handler) (not (macro-function handler)))
     (error "Check ~A requires a defined function handler: ~A" id handler))
   (when (and validate (not (fboundp validate)))
     (error "Check ~A has an undefined parameter validator: ~A" id validate))
+  (dolist (name optional-parameters)
+    (unless (and (stringp name) (nth-value 1 (gethash name parameters)))
+      (error "Check ~A has an undeclared optional parameter: ~S" id name)))
   (let ((old (gethash id *checks*)))
     (when (and old (not (eq handler (field old "handler"))))
       (error "Check ID collision ~A: ~A versus ~A" id (field old "handler") handler))
     (setf (gethash id *checks*)
           (dict "handler" handler "parameters" parameters "defaults" defaults
-                "validate" validate))
+                "validate" validate "optionalParameters" optional-parameters))
     id))
 
 (-> register-profile (string vector)
@@ -119,6 +123,7 @@
               ((equal type "object") (hash-table-p value))
               ((equal type "array") (and (vectorp value) (not (stringp value))))
               ((equal type "nullable-string") (or (eq value :null) (stringp value)))
+              ((equal type "file") (stringp value))
               ((equal type "any") t)
               (t (error "Unknown parameter type: ~A" type))))))
 
@@ -133,10 +138,18 @@
                  (let ((type (gethash key schema)))
                    (unless type (error "Unknown parameter ~A for ~A" key id))
                    (unless (parameter-valid-p value type)
-                     (error "Parameter ~A of ~A must be ~A; got ~S" key id type value)))) params)
+                     (error "Suite ~A, case ~A: parameter ~A of ~A must be ~A; got ~S"
+                            (or (field vars "suite") "writing-common-lisp")
+                            (or (field vars "id") "<unknown>") key id type value))
+                   (when (equal type "file")
+                     (resolve-resource vars value)
+                     (let ((references (sequence-list (field vars "fileResources"))))
+                       (setf (gethash "fileResources" vars)
+                             (coerce (adjoin value references :test #'equal) 'vector)))))) params)
       (maphash (lambda (key type)
                  (declare (ignore type))
-                 (unless (nth-value 1 (gethash key params))
+                 (unless (or (member key (field definition "optionalParameters") :test #'equal)
+                             (nth-value 1 (gethash key params)))
                    (error "Missing parameter ~A for ~A" key id))) schema)
       (let ((validator (field definition "validate")))
         (when (and validator (not (funcall validator params)))
@@ -246,5 +259,6 @@
     (maphash (lambda (id definition)
                (setf (gethash id result)
                      (dict "parameters" (field definition "parameters")
-                           "defaults" (field definition "defaults")))) *checks*)
+                           "defaults" (field definition "defaults")
+                           "optionalParameters" (coerce (field definition "optionalParameters") 'vector)))) *checks*)
     result))

@@ -2,6 +2,16 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.0 (2026-11-02)
+
+* Moved runtime assertions and fixture projects into per-case files.
+* Added binary fixture baselines, executable permission tracking and confined
+file parameters for independent check extensions.
+* Prepared workspaces and replay inputs from immutable snapshots while retaining
+support for historical inline case inputs.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E3-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.3.0 (2026-11-01)

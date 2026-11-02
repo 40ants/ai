@@ -9,6 +9,7 @@
   (:import-from #:40ants-ai-evals/checks #:load-check-systems)
   (:import-from #:40ants-ai-evals/suites #:catalog)
   (:import-from #:40ants-ai-evals/runner #:grading-vars)
+  (:import-from #:40ants-ai-evals-tests/case-resources-test)
   (:import-from #:40ants-ai-evals-tests/recovery-test)
   (:import-from #:40ants-ai-evals-tests/suites-test)
   (:import-from #:40ants-ai-evals-tests/skill-behavior-test)

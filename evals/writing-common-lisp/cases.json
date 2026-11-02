@@ -139,9 +139,7 @@
       "group": "development",
       "shouldTrigger": true,
       "task": "Use $writing-common-lisp and follow this project's conventions. Create src/legacy.lisp in system demo with an exported add-score function accepting two integers and returning their sum. Make it ready to load. Do not install dependencies.",
-      "fixtures": {
-        "AGENTS.md": "This project deliberately uses CL:DEFPACKAGE, not UIOP:DEFINE-PACKAGE. Preserve full path-based package names. Do not add Serapeum signatures or imports. These project conventions override general skill preferences.\n"
-      },
+      "fixtures": "cases/project-override/fixtures/",
       "file": "src/legacy.lisp",
       "package": "demo/src/legacy",
       "function": "add-score",
@@ -164,9 +162,7 @@
       "group": "development",
       "shouldTrigger": true,
       "task": "Use $writing-common-lisp. Review this Common Lisp project's source and correct any misspelled 'helo' greetings, following the skill's conventions about which files may be edited.",
-      "fixtures": {
-        ".qlot/vendor/example.lisp": "(in-package #:cl-user)\n(defun greeting () \"helo\")\n"
-      },
+      "fixtures": "cases/qlot-boundary/fixtures/",
       "protected": ".qlot/vendor/example.lisp",
       "noChanges": true,
       "checks": [

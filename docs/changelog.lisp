@@ -4,6 +4,12 @@
 (in-package #:40ants-ai-evals-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP"))
+  (0.4.0 2026-11-02
+         "* Moved runtime assertions and fixture projects into per-case files.
+* Added binary fixture baselines, executable permission tracking and confined
+file parameters for independent check extensions.
+* Prepared workspaces and replay inputs from immutable snapshots while retaining
+support for historical inline case inputs.")
   (0.3.0 2026-11-01
          "* Added evaluation suites for the remaining eleven project skills and
 suite selection, independent behavioral checks, and reproducible tool environments.

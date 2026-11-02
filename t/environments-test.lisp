@@ -1,6 +1,7 @@
 ;;;; Offline fixture behavior and native provider configuration.
 (uiop:define-package #:40ants-ai-evals-tests/environments-test
   (:use #:cl)
+  (:import-from #:40ants-ai-evals/case-resources #:resolve-resource)
   (:import-from #:serapeum #:dict)
   (:import-from #:rove #:deftest #:ok #:signals)
   (:import-from #:40ants-ai-evals/util
@@ -184,7 +185,10 @@
   (with-fixture (workspace "playwright" "server-required")
     (let* ((cases (read-json (at (root) "evals/nix-shell-playwright/cases.json")))
            (case (find "server-required" cases :key (lambda (case) (field case "vars" "id")) :test #'equal))
-           (source (field case "vars" "fixtures" "server.lisp"))
+           (source (uiop:read-file-string
+                    (at (resolve-resource (field case "vars")
+                                          (field case "vars" "fixtures") :directory t)
+                        "server.lisp") :external-format :utf-8))
            (process nil))
       (write-text (at workspace "server.lisp") source)
       (write-text (at workspace "index.html") "fixture")

@@ -1,6 +1,7 @@
 ;;;; Snapshot inputs, prepare fixtures and delegate execution to Promptfoo.
 (uiop:define-package #:40ants-ai-evals/runner
   (:use #:cl)
+  (:import-from #:40ants-ai-evals/case-resources)
   (:import-from #:asdf)
   (:import-from #:babel)
   (:import-from #:cl-ppcre)
@@ -113,6 +114,7 @@
       (let* ((raw (field case "vars"))
              (suite (find-suite (gethash "suite" flags)))
              (vars (progn (setf (gethash "suite" raw) (field suite "id")) (grading-vars raw))))
+        (40ants-ai-evals/case-resources:validate-fixtures vars)
         (validate-extension-paths vars)
         (40ants-ai-evals/checks:validate-plan vars)
         (setf (gethash "vars" case) vars)))
@@ -185,9 +187,9 @@
           (remove-directory unpack))
         (copy-directory (at (root) (option flags "skill-dir" *skill-path*)) skill))
     (dolist (directory '("evals/" "src/" "roswell/" "t/" "nix/"))
-      (copy-directory (at (root) directory) (at harness directory)))
+      (copy-directory (at (root) directory) (at harness directory) :ignore-editor-locks t))
     ;; Generated HTML is deliberately excluded; Lisp docs supply the system version.
-    (dolist (relative (tree-files (at (root) "docs/") :exclude '("build")))
+    (dolist (relative (tree-files (at (root) "docs/") :exclude '("build") :ignore-editor-locks t))
       (let ((target (at (at harness "docs/") relative)))
         (ensure-directories-exist target)
         (uiop:copy-file (at (at (root) "docs/") relative) target)))
@@ -216,15 +218,10 @@
           (let ((workspace (at run-dir (format nil "fixtures/~A/~A/~A/" id agent variant))))
             (ensure-directories-exist (at workspace ".keep"))
             (execute (list "git" "init" "--quiet" (namestring workspace)))
-            (when (field vars "fixtures")
-              (maphash (lambda (relative content)
-                         (unless (safe-relative-p relative)
-                           (error "Invalid fixture path: ~A" relative))
-                         (write-text (at workspace relative) content))
-                       (field vars "fixtures")))
+            (40ants-ai-evals/case-resources:copy-fixtures vars workspace)
             (when (and (field vars "suite")
                        (not (equal (field vars "suite") "writing-common-lisp"))
-                       (not (field vars "fixtures" "AGENTS.md")))
+                       (not (probe-file (at workspace "AGENTS.md"))))
               ;; Environment facts only; assertions and skill-specific advice stay
               ;; out of the prompt. Keep copied samples independent of user projects.
               (write-text (at workspace "AGENTS.md")
@@ -232,9 +229,12 @@
               (when (equal (field vars "environmentProfile") "playwright")
                 (with-open-file (out (at workspace "AGENTS.md") :direction :output :if-exists :append
                                      :external-format :utf-8)
-                  (format out "~%The prepared fixture MCP provides `run_browser_smoke` for the exact command `./run_smoke_test.sh`. Use that runner when available: it launches the pinned browser outside the agent's restricted subprocess environment, captures its real exit status, and retains screenshots. Generate the wrapper and Python test normally; the runner does not generate or repair them.~%")))
-              (setf (gethash "AGENTS.md" (gethash "fixtures" vars))
-                    (uiop:read-file-string (at workspace "AGENTS.md"))))
+                  (format out "~%The prepared fixture MCP provides `run_browser_smoke` for the exact command `./run_smoke_test.sh`. Use that runner when available: it launches the pinned browser outside the agent's restricted subprocess environment, captures its real exit status, and retains screenshots. Generate the wrapper and Python test normally; the runner does not generate or repair them.~%"))))
+            (let ((baseline (40ants-ai-evals/case-resources:fixture-manifest vars)))
+              (when (probe-file (at workspace "AGENTS.md"))
+                (setf (gethash "AGENTS.md" baseline)
+                      (40ants-ai-evals/case-resources:file-metadata (at workspace "AGENTS.md"))))
+              (setf (gethash "fixtureManifest" vars) baseline))
             (when (equal variant "with-skill")
               (copy-directory (at run-dir "skill/")
                               (at workspace (format nil "~A/skills/~A/"
@@ -373,15 +373,8 @@
           "environment" (or environment
                             (40ants-ai-evals/environments:preflight
                              (field (find-suite (gethash "suite" flags)) "environmentProfile")))
-          "fixturesHash" (ironclad:byte-array-to-hex-string
-                          (ironclad:digest-sequence
-                           :sha256 (babel:string-to-octets
-                                    (encode (map 'vector
-                                                 (lambda (case)
-                                                   (dict "id" (field case "vars" "id")
-                                                         "fixtures" (field case "vars" "fixtures")
-                                                         "scenario" (field case "vars" "scenario"))) cases))
-                                    :encoding :utf-8)))
+          "fixturesHash" (40ants-ai-evals/case-resources:input-fingerprint cases :fixtures-only t)
+          "inputsHash" (40ants-ai-evals/case-resources:input-fingerprint cases)
           "skillSource" (or (gethash "ref" flags) (gethash "skill-dir" flags) "working-tree")
           "skillHash" (digest-tree (at run-dir "skill/"))
           "suiteHash" (digest-tree (at run-dir "harness/"))
@@ -446,6 +439,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
   (let* ((cases (selected-cases flags)) (agents (selected-agents flags))
          (environment (40ants-ai-evals/environments:preflight
                        (field (find-suite (gethash "suite" flags)) "environmentProfile")))
+         (inputs-hash (40ants-ai-evals/case-resources:input-fingerprint cases))
          (tools (tool-versions agents))
          (id (format nil "~A-~A" (substitute #\- #\. (substitute #\- #\: (now)))
                      (subseq (unique-id) 0 6)))
@@ -457,7 +451,12 @@ Only the local export is enriched; Promptfoo's database is left untouched."
          (progn
            (ensure-directories-exist (at run-dir ".keep"))
            (let* ((harness (snapshot run-dir flags))
-                  (info (manifest id run-dir flags cases variants tools environment))
+                  (40ants-ai-evals/case-resources:*inputs-root* harness)
+                  (snapshot-hash (40ants-ai-evals/case-resources:input-fingerprint cases))
+                  (info (progn
+                          (unless (equal inputs-hash snapshot-hash)
+                            (error "Case inputs changed after preflight; refusing model calls"))
+                          (manifest id run-dir flags cases variants tools environment)))
                   (auth (at (or (uiop:getenv "CODEX_HOME")
                                  (at (user-homedir-pathname) ".codex/")) "auth.json"))
                   (status 1))
@@ -514,7 +513,9 @@ Only the local export is enriched; Promptfoo's database is left untouched."
     (dolist (entry (40ants-ai-evals/suites:catalog))
       (let ((file (field entry "config")))
         (when (probe-file (at (root) file))
-          (setf (gethash file hashes) (digest-file (at (root) file))))))
+          (setf (gethash file hashes) (digest-file (at (root) file))))
+        (setf (gethash (concatenate 'string (field entry "id") "/inputs") hashes)
+              (digest-tree (at (root) (suite-path (field entry "id")))))))
     (dolist (asd (uiop:directory-files (root) "*.asd"))
       (setf (gethash (file-namestring asd) hashes) (digest-file asd)))
     (ironclad:byte-array-to-hex-string
@@ -539,7 +540,10 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                (let ((stat (sb-posix:lstat (namestring path))))
                  (unless (and (sb-posix:s-isreg (sb-posix:stat-mode stat))
                               (= (sb-posix:stat-size stat) (field metadata "size"))
-                              (equal (digest-file path) (field metadata "sha256")))
+                              (equal (digest-file path) (field metadata "sha256"))
+                              (or (not (nth-value 1 (gethash "executableBits" metadata)))
+                                  (= (logand #o111 (sb-posix:stat-mode stat))
+                                     (field metadata "executableBits"))))
                    (return-from invalid (format nil "Corrupt archived artifact: ~A" relative)))))))
          artifacts)
         nil))))
@@ -567,6 +571,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                                 (concatenate 'string
                                              (suite-path (or (field info "suite") "writing-common-lisp"))
                                              "selected-cases.json")))))
+         (40ants-ai-evals/case-resources:*inputs-root* (at run-dir "harness/"))
          (report nil))
     (dolist (dir (uiop:subdirectories (at run-dir "samples/")))
       (let* ((sample (read-json (at dir "sample.json")))
@@ -594,7 +599,8 @@ Only the local export is enriched; Promptfoo's database is left untouched."
                     "grading" (if integrity
                                   (dict "pass" 'yason:false "score" 0 "reason" integrity)
                                   (40ants-ai-evals/grading/contracts:grade
-                                   sample (grading-vars (field case "vars"))))) report))))
+                                   sample (grading-vars (field case "vars"))
+                                   :sample-directory dir))) report))))
     (let ((result (dict "runId" (field info "id") "replayedAt" (now)
                         "graderSuiteHash" (grader-fingerprint)
                         "samples" (coerce (nreverse report) 'vector))))

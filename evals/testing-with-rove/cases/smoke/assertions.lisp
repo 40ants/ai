@@ -1,0 +1,7 @@
+(assert (rove:run-test 'demo-tests/core-test::positive-count))
+(let ((test (definition "tests/core-test.lisp" "deftest" "positive-count")))
+  (assert test)
+  (assert (some (lambda (node)
+                  (and (op-p node "signals")
+                       (consp (second node))))
+                (nodes test))))

@@ -1,0 +1,1 @@
+This project deliberately uses CL:DEFPACKAGE, not UIOP:DEFINE-PACKAGE. Preserve full path-based package names. Do not add Serapeum signatures or imports. These project conventions override general skill preferences.

@@ -229,7 +229,7 @@
         (loop for test across cases for vars = (field test "vars") do
           (ok (equal suite (field vars "suite")))
           (ok (equal suite (field vars "skillName")))
-          (ok (hash-table-p (field vars "fixtures")))
+          (ok (or (not (field vars "fixtures")) (stringp (field vars "fixtures"))))
           (ok (hash-table-p (field vars "scenario")))
           (setf (gethash "checkSystems" vars) (field defaults "checkSystems"))
           (ok (validate-plan vars)))))))

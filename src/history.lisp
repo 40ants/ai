@@ -187,7 +187,7 @@ remain selectable across suites so comparison can report a clear identity error.
                 (variant-statistics nil))))
     (dolist (key '("id" "label" "started" "skillHash" "suiteHash" "model" "effort"
                    "group" "cases" "repeat" "tools" "environment"
-                   "environmentVersions" "environmentFingerprint" "fixturesHash"))
+                   "environmentVersions" "environmentFingerprint" "fixturesHash" "inputsHash"))
       (setf (gethash key summary) (field manifest key)))
     (setf (gethash "suite" summary) (run-suite manifest)
           (gethash "skillName" summary) (or (present (field manifest "skillName"))
@@ -362,7 +362,7 @@ Different suite identities are always rejected; SUITE restricts both selected ru
                                   "tools" "mode" "timeout" "settings"
                                   "evaluationTimeoutMs" "executionTimeoutMs"
                                   "environment" "environmentVersions" "environmentFingerprint"
-                                  "fixturesHash"))))
+                                  "fixturesHash" "inputsHash"))))
     (unless (run-has-agent-p before before-agent)
       (error "Run ~A has no results or profile for agent ~A"
              (field before "id") before-agent))

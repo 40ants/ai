@@ -586,6 +586,59 @@ The default sample deadline remains 240 seconds. For longer tool workflows,
 select a larger deadline explicitly, for example `--timeout 600000`.
 Timeouts are infrastructure errors and do not prove a skill regression.
 
+### File-backed assertions and fixtures
+
+Case inputs live beside each other under the suite directory:
+
+```text
+cases/optional-string/
+  assertions.lisp
+  fixtures/
+    src/session.lisp
+```
+
+References in `cases.json` are relative to the suite directory:
+
+```json
+{
+  "fixtures": "cases/optional-string/fixtures/",
+  "checks": [
+    {
+      "check": "skill/lisp-runtime",
+      "params": {
+        "loadFiles": ["src/session.lisp"],
+        "systems": [],
+        "assertionsFile": "cases/optional-string/assertions.lisp"
+      }
+    }
+  ]
+}
+```
+
+Omit `fixtures` when the case has no starting files. Directories can contain
+text, PNG images and arbitrary binary files. Hidden files, nested directories
+and executable permissions are preserved; symbolic links and special files
+are rejected. Existing archive limits apply: 2 MiB per text file and 20 MiB
+per binary artifact. Paths must stay inside the suite.
+
+`assertions.lisp` contains ordinary Lisp forms. The fresh checking process
+loads dependencies, candidate source and runtime helpers before loading this
+file. Relative candidate paths and helpers such as `definition`, `forms`,
+`nodes` and `op-p` keep their existing meaning. Assertion files are grading
+inputs and are not installed in the agent workspace.
+
+Fixture baselines record hashes, sizes and executable bits before the agent
+runs, including protected instructions supplied by the harness. Binary changes
+are included in preservation checks and the added/modified/deleted inventory.
+Input fingerprints change when resource bytes or executable permissions change.
+The harness validates inputs before a model call, checks the snapshot against
+those inputs and prepares every workspace from that snapshot.
+
+Replay uses archived case inputs with the current check implementation, so
+later edits to working-tree fixtures and assertions do not affect an old run.
+Legacy inline fixture objects and `assertions` strings remain readable; do not
+specify both `assertions` and `assertionsFile` in one check.
+
 ### Inspect failures and accumulated results
 
 ```bash

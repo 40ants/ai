@@ -149,9 +149,9 @@
         (uiop:wait-process process))
       (remove-directory scratch))))
 
-(-> tree-files (t &key (:exclude list))
+(-> tree-files (t &key (:exclude list) (:ignore-editor-locks boolean))
     list)
-(defun tree-files (directory &key exclude)
+(defun tree-files (directory &key exclude ignore-editor-locks)
   "Return sorted relative files; reject symlinks before following directories."
   (labels ((visit (dir)
              (loop for entry in (sort (uiop:directory* (at dir "*.*") :resolve-symlinks nil)
@@ -161,7 +161,10 @@
                    for name = (car (last (uiop:split-string
                                          (string-right-trim "/" (namestring entry))
                                          :separator "/")))
-                   unless (member name exclude :test #'string=)
+                   unless (or (member name exclude :test #'string=)
+                              (and ignore-editor-locks
+                                   (sb-posix:s-islnk (sb-posix:stat-mode stat))
+                                   (uiop:string-prefix-p ".#" name)))
                      append (cond
                               ((sb-posix:s-islnk (sb-posix:stat-mode stat))
                                (error "Snapshot contains symlink: ~A" entry))
@@ -169,15 +172,18 @@
                               (t (list (enough-namestring entry directory)))))))
     (visit (uiop:ensure-directory-pathname directory))))
 
-(-> copy-directory (t t)
+(-> copy-directory (t t &key (:ignore-editor-locks boolean))
     t)
-(defun copy-directory (source destination)
+(defun copy-directory (source destination &key ignore-editor-locks)
   "Copy a plain tree without following symbolic links."
   (ensure-directories-exist (at destination ".keep"))
-  (dolist (relative (tree-files source))
+  (dolist (relative (tree-files source :ignore-editor-locks ignore-editor-locks))
     (let ((target (at destination relative)))
       (ensure-directories-exist target)
-      (uiop:copy-file (at source relative) target)))
+      (uiop:copy-file (at source relative) target)
+      (sb-posix:chmod (namestring target)
+                      (logand #o777 (sb-posix:stat-mode
+                                     (sb-posix:lstat (namestring (at source relative))))))))
   destination)
 
 (-> digest-file (t)

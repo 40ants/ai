@@ -1,0 +1,263 @@
+;;;; File-backed case inputs, binary evidence and old-archive compatibility.
+(uiop:define-package #:40ants-ai-evals-tests/case-resources-test
+    (:use #:cl)
+  (:import-from #:asdf)
+  (:import-from #:sb-posix)
+  (:import-from #:rove #:deftest #:ok #:signals #:testing)
+  (:import-from #:serapeum #:-> #:dict)
+  (:import-from #:40ants-ai-evals/case-resources
+                #:*inputs-root* #:*sample-directory* #:resolve-resource #:fixture-manifest
+                #:copy-fixtures #:file-metadata #:restore-sample #:input-fingerprint
+                #:manifest-equal-p #:baseline-manifest)
+  (:import-from #:40ants-ai-evals/checks #:register-check #:validate-plan #:execute-plan
+                #:make-context #:outcome)
+  (:import-from #:40ants-ai-evals/grading/contracts #:grade)
+  (:import-from #:40ants-ai-evals/collector)
+  (:import-from #:40ants-ai-evals/runner)
+  (:import-from #:40ants-ai-evals/suites #:catalog #:suite-path)
+  (:import-from #:40ants-ai-evals/util #:field #:at #:root #:write-text #:read-json
+                #:temporary-directory #:remove-directory #:copy-directory #:digest-file
+                #:sequence-list #:true-p #:run-command))
+(in-package #:40ants-ai-evals-tests/case-resources-test)
+
+(defmacro with-input-tree ((directory vars) &body body)
+  `(let* ((,directory (temporary-directory "case-inputs"))
+          (*inputs-root* ,directory)
+          (,vars (dict "suite" "defining-clos-classes" "id" "example"
+                       "fixtures" "cases/example/fixtures/")))
+     (declare (ignorable ,directory ,vars))
+     (unwind-protect (progn ,@body) (remove-directory ,directory))))
+
+(-> input-path (t string)
+    pathname)
+(defun input-path (directory relative)
+  (at (at directory "evals/defining-clos-classes/") relative))
+
+(-> write-bytes (t vector)
+    t)
+(defun write-bytes (file bytes)
+  (ensure-directories-exist file)
+  (with-open-file (stream file :direction :output :if-exists :supersede
+                          :element-type '(unsigned-byte 8))
+    (write-sequence bytes stream))
+  file)
+
+(-> runtime-vars (hash-table string)
+    hash-table)
+(defun runtime-vars (vars file)
+  (setf (gethash "checkSystems" vars)
+        (vector (dict "system" "40ants-ai-evals-skill-behavior-checks"
+                      "asd" "evals/checks/skill-behavior/40ants-ai-evals-skill-behavior-checks.asd"))
+        (gethash "checks" vars)
+        (vector (dict "check" "skill/lisp-runtime"
+                      "params" (dict "loadFiles" #("candidate.lisp") "assertionsFile" file))))
+  vars)
+
+(deftest confined-resource-validation
+    (with-input-tree (directory vars)
+      (let ((file (input-path directory "cases/example/check.lisp")))
+        (write-text file "(assert t)")
+        (ok (equal file (resolve-resource vars "cases/example/check.lisp")))
+        (dolist (path '("/etc/passwd" "../other/check.lisp" "cases/../check.lisp"
+                        "cases/example/missing.lisp" "cases/example/"))
+          (ok (signals (resolve-resource vars path))))
+        (ok (signals (resolve-resource vars "cases/example/check.lisp" :directory t)))
+        (let ((link (input-path directory "cases/linked")))
+          (sb-posix:symlink (namestring (uiop:pathname-directory-pathname file)) (namestring link))
+          (ok (signals (resolve-resource vars "cases/linked/check.lisp"))))
+        (let ((link (input-path directory "cases/example/link.lisp")))
+          (sb-posix:symlink (namestring file) (namestring link))
+          (ok (signals (resolve-resource vars "cases/example/link.lisp"))))
+        (let ((pipe (input-path directory "cases/example/pipe")))
+          (sb-posix:mkfifo (namestring pipe) #o600)
+          (ok (signals (resolve-resource vars "cases/example/pipe"))))
+        (handler-case (resolve-resource vars "missing")
+          (error (condition)
+            (let ((message (princ-to-string condition)))
+              (ok (search "defining-clos-classes" message))
+              (ok (search "example" message))
+              (ok (search "missing" message)))))
+        (runtime-vars vars "cases/example/check.lisp")
+        (ok (validate-plan vars))
+        (write-text file "(assert nil)")
+        (ok (validate-plan vars))
+        ;; Conflicting modes are rejected by the check extension before a model call.
+        (setf (gethash "assertions" (field (aref (field vars "checks") 0) "params")) "(assert t)")
+        (ok (signals (validate-plan vars))))))
+
+(deftest byte-copy-modes-and-isolation
+    (with-input-tree (directory vars)
+      (let* ((fixtures (input-path directory "cases/example/fixtures/"))
+             (first (at directory "workspace-one/")) (second (at directory "workspace-two/"))
+             (png (40ants-ai-evals/util::file-octets
+                   (at (root) "t/fixtures/case-resources/pixel.png")))
+             (binary #(0 255 128 10 13 0)) (script (at fixtures "scripts/run.sh")))
+        (write-text (at fixtures "nested/привет.txt") (format nil "Привет ~C~%" #\~))
+        (write-text (at fixtures ".hidden") "hidden")
+        (write-bytes (at fixtures "image.png") png)
+        (write-bytes (at fixtures "payload.bin") binary)
+        (write-text script (format nil "#!/bin/sh~%exit 0~%"))
+        (sb-posix:chmod (namestring script) #o751)
+        (let ((before (fixture-manifest vars)))
+          (ok (= 5 (hash-table-count before)))
+          (copy-fixtures vars first)
+          (copy-fixtures vars second)
+          (ok (= #o111 (field (file-metadata (at first "scripts/run.sh")) "executableBits")))
+          (ok (equal (digest-file (at fixtures "image.png")) (digest-file (at first "image.png"))))
+          (ok (equal (digest-file (at fixtures "payload.bin")) (digest-file (at first "payload.bin"))))
+          (write-text (at first ".hidden") "changed")
+          (ok (equal "hidden" (uiop:read-file-string (at second ".hidden"))))
+          (ok (manifest-equal-p before (fixture-manifest vars))))
+        (sb-posix:symlink (namestring script) (namestring (at fixtures "link")))
+        (ok (signals (fixture-manifest vars))))))
+
+(deftest resource-fingerprints-and-snapshot-inputs
+    (with-input-tree (directory vars)
+      (let* ((assertion (input-path directory "cases/example/assertions.lisp"))
+             (fixture (input-path directory "cases/example/fixtures/start.bin"))
+             (snapshot (at directory "snapshot/"))
+             (cases (list (dict "vars" vars))))
+        (write-text assertion "(assert t)")
+        (write-bytes fixture #(0 255 42))
+        (runtime-vars vars "cases/example/assertions.lisp")
+        (validate-plan vars)
+        (let ((initial (input-fingerprint cases))
+              (fixtures-only (input-fingerprint cases :fixtures-only t)))
+          (copy-directory (at directory "evals/") (at snapshot "evals/"))
+          (write-text assertion "(assert nil)")
+          (ok (not (equal initial (input-fingerprint cases))))
+          (ok (equal fixtures-only (input-fingerprint cases :fixtures-only t)))
+          (let ((*inputs-root* snapshot))
+            (ok (equal initial (input-fingerprint cases)))
+            (copy-fixtures vars (at directory "from-snapshot/")))
+          (sb-posix:chmod (namestring fixture) #o700)
+          (ok (not (equal fixtures-only (input-fingerprint cases :fixtures-only t))))
+          (sb-posix:chmod (namestring fixture) #o600)
+          (write-bytes fixture #(0 255 43))
+          (ok (not (equal fixtures-only (input-fingerprint cases :fixtures-only t))))))))
+
+(deftest binary-change-inventory-and-common-checks
+    (with-input-tree (directory vars)
+      (let* ((source (input-path directory "cases/example/fixtures/payload.bin"))
+             (workspace (at directory "workspace/")) (archive (at directory "archive/")))
+        (write-bytes source #(0 255 12))
+        (copy-fixtures vars workspace)
+        (setf (gethash "fixtureManifest" vars) (fixture-manifest vars))
+        (setf (gethash "checks" vars) (vector (dict "check" "files/no-changes"
+                                                    "params" (dict "fixtures" (field vars "fixtures")))))
+        (labels ((sample ()
+                   (multiple-value-bind (files artifacts)
+                       (40ants-ai-evals/collector::collect-files workspace archive)
+                     (dict "files" files "artifacts" artifacts "skillRead" 'yason:false)))
+                 (changes ()
+                   (let ((sample (sample)))
+                     (40ants-ai-evals/collector::sample-changes
+                      (field sample "files") (field sample "artifacts") (baseline-manifest vars)))))
+          (ok (true-p (field (grade (sample) vars) "pass")))
+          (ok (zerop (length (changes))))
+          (write-bytes (at workspace "payload.bin") #(0 254 12))
+          (ok (equal "modified" (field (aref (changes) 0) "status")))
+          (ok (not (true-p (field (grade (sample) vars) "pass"))))
+          (copy-fixtures vars workspace)
+          (sb-posix:chmod (namestring (at workspace "payload.bin")) #o700)
+          (ok (equal "modified" (field (aref (changes) 0) "status")))
+          (delete-file (at workspace "payload.bin"))
+          (ok (equal "deleted" (field (aref (changes) 0) "status")))
+          (write-bytes (at workspace "new.bin") #(0 1))
+          (ok (= 2 (length (changes))))))))
+
+(deftest archived-binary-runtime-and-helpers
+    (with-input-tree (directory vars)
+      (let* ((assertion (input-path directory "cases/example/assertions.lisp"))
+             (workspace (at directory "candidate/")) (archive (at directory "archive/")))
+        (remhash "fixtures" vars)
+        (runtime-vars vars "cases/example/assertions.lisp")
+        (write-text (at workspace "candidate.lisp") "(defun twice (n) (* 2 n))")
+        (write-bytes (at workspace "payload.bin") #(0 255 42))
+        (write-text assertion
+                    (format nil "(assert (= 6 (twice 3)))~%(assert (definition ~S ~S ~S))~%(with-open-file (in ~S :element-type '(unsigned-byte 8)) (assert (equalp #(0 255 42) (let ((bytes (make-array 3 :element-type '(unsigned-byte 8)))) (read-sequence bytes in) bytes))))~%"
+                            "candidate.lisp" "defun" "twice" "payload.bin"))
+        (multiple-value-bind (files artifacts)
+            (40ants-ai-evals/collector::collect-files workspace archive)
+          (let ((sample (dict "files" files "artifacts" artifacts "skillRead" 'yason:true)))
+            (ok (true-p (field (grade sample vars :sample-directory archive) "pass")))
+            (write-text assertion "(assert (= 7 (twice 3)))")
+            (ok (not (true-p (field (grade sample vars :sample-directory archive) "pass"))))
+            (write-bytes (at archive "artifacts/payload.bin") #(0 255 43))
+            (let ((*sample-directory* archive))
+              (ok (signals (restore-sample sample (at directory "corrupt/"))))))))))
+
+(deftest migrated-suite-resources
+    (let ((assertions 0) (fixtures 0))
+      (dolist (suite (catalog))
+        (let ((cases (read-json (at (at (root) (suite-path (field suite "id"))) "cases.json"))))
+          (loop for case across cases for vars = (field case "vars") do
+                (setf vars (40ants-ai-evals/runner:grading-vars vars))
+                (when (field vars "fixtures")
+                  (ok (stringp (field vars "fixtures")))
+                  (fixture-manifest vars)
+                  (incf fixtures))
+                (validate-plan vars)
+                (dolist (check (sequence-list (field vars "checks")))
+                  (let ((params (field check "params")))
+                    (when (field params "assertionsFile")
+                      (ok (not (field params "assertions")))
+                      (resolve-resource vars (field params "assertionsFile"))
+                      (incf assertions)))))))
+      (ok (= 35 assertions))
+      (ok (= 49 fixtures))))
+
+(deftest file-assertion-timeout
+    (with-input-tree (directory vars)
+      (remhash "fixtures" vars)
+      (let ((assertion (input-path directory "cases/example/loop.lisp")))
+        (write-text assertion
+                    (format nil "(with-open-file (out ~S :direction :output :if-exists :supersede) (write-line ~S out)) (loop)"
+                            (namestring (at directory "deadline-started")) "started"))
+        (runtime-vars vars "cases/example/loop.lisp")
+        (validate-plan vars)
+        (let ((timeout (find-symbol "*RUNTIME-TIMEOUT*"
+                                    "40ANTS-AI-EVALS-SKILL-BEHAVIOR-CHECKS/CHECKS")))
+          ;; Exercise the actual fresh child and deadline without waiting a minute.
+          (progv (list timeout) '(3)
+            (ok (signals (grade (dict "files" (dict "candidate.lisp" "(defun twice (n) (* 2 n))")
+                                      "skillRead" 'yason:true) vars))))
+          (ok (probe-file (at directory "deadline-started")))))))
+
+(deftest resource-preflight-precedes-models
+    (with-input-tree (directory vars)
+      ;; The real suite has resources absent from this input tree. The runner must
+      ;; fail in preflight, before tools, run creation or any provider is invoked.
+      (let ((before (uiop:subdirectories (at (root) ".evals/runs/"))))
+        (ok (signals (40ants-ai-evals/runner:run-eval
+                      (dict "suite" "defining-clos-classes" "filter" "optional-string"))))
+        (ok (equal before (uiop:subdirectories (at (root) ".evals/runs/")))))))
+
+(deftest binary-preservation-and-source-scope
+    (with-input-tree (directory vars)
+      (let* ((source (input-path directory "cases/example/fixtures/image.png"))
+             (workspace (at directory "candidate/")))
+        (write-bytes source (40ants-ai-evals/util::file-octets
+                             (at (root) "t/fixtures/case-resources/pixel.png")))
+        (copy-fixtures vars workspace)
+        (setf (gethash "fixtureManifest" vars) (fixture-manifest vars))
+        (setf (gethash "checks" vars)
+              (vector (dict "check" "files/preserved"
+                            "params" (dict "fixtures" (field vars "fixtures") "protected" "image.png"))
+                      (dict "check" "source/scope"
+                            "params" (dict "fixtures" (field vars "fixtures") "file" "output.lisp"))))
+        (write-text (at workspace "output.lisp") "(values)")
+        (labels ((passes ()
+                   (multiple-value-bind (files artifacts)
+                       (40ants-ai-evals/collector::collect-files workspace)
+                     (true-p (field (grade (dict "files" files "artifacts" artifacts
+                                                 "skillRead" 'yason:false) vars) "pass")))))
+          (ok (passes))
+          (write-bytes (at workspace "image.png") #(0 255))
+          (ok (not (passes)))
+          (copy-fixtures vars workspace)
+          (write-bytes (at workspace "unexpected.bin") #(0 255))
+          (ok (not (passes)))
+          (delete-file (at workspace "unexpected.bin"))
+          (delete-file (at workspace "image.png"))
+          (ok (not (passes)))))))

@@ -8,10 +8,7 @@
       "group": "development",
       "task": "Use $clearing-asdf-fasl-cache. Clear stale ASDF fasls for the current demo project only. This project uses custom ASDF output translations under .eval-cache/, not the default user cache. Inspect .eval-environment.json for exact projectPaths and foreignPaths. Read the skill helper and adapt safely to this explicit cache layout if it assumes a default cache. Do not change HOME or project source. After removing stale entries, configure ASDF output translations to .eval-cache/rebuilt/, force-load the demo system, and verify DEMO/SRC/COUNTER:VALUE returns 2. Dependencies are preinstalled; do not install anything.",
       "shouldTrigger": true,
-      "fixtures": {
-        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/counter\"))\n",
-        "src/counter.lisp": "(uiop:define-package #:demo/src/counter (:use #:cl) (:export #:value))\n(in-package #:demo/src/counter)\n(defun value () 2)\n"
-      },
+      "fixtures": "cases/smoke/fixtures/",
       "environmentProfile": "cache",
       "scenario": {
         "name": "smoke"
@@ -27,7 +24,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -59,10 +57,7 @@
       "group": "development",
       "task": "Use $clearing-asdf-fasl-cache. Clear all SBCL-version and architecture caches belonging to this demo project. This project uses custom ASDF output translations under .eval-cache/, not the default user cache. Inspect .eval-environment.json for exact projectPaths and foreignPaths. Read the skill helper and adapt safely to this explicit cache layout if it assumes a default cache. Do not change HOME or project source. After removing stale entries, configure ASDF output translations to .eval-cache/rebuilt/, force-load the demo system, and verify DEMO/SRC/COUNTER:VALUE returns 2. Dependencies are preinstalled; do not install anything.",
       "shouldTrigger": true,
-      "fixtures": {
-        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/counter\"))\n",
-        "src/counter.lisp": "(uiop:define-package #:demo/src/counter (:use #:cl) (:export #:value))\n(in-package #:demo/src/counter)\n(defun value () 2)\n"
-      },
+      "fixtures": "cases/multi-version/fixtures/",
       "environmentProfile": "cache",
       "scenario": {
         "name": "multi-version"
@@ -78,7 +73,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -110,10 +106,7 @@
       "group": "development",
       "task": "Use $clearing-asdf-fasl-cache. Clear stale ASDF fasls for the explicit project path containing spaces shown in .eval-environment.json. This project uses custom ASDF output translations under .eval-cache/, not the default user cache. Inspect .eval-environment.json for exact projectPaths and foreignPaths. Read the skill helper and adapt safely to this explicit cache layout if it assumes a default cache. Do not change HOME or project source. After removing stale entries, configure ASDF output translations to .eval-cache/rebuilt/, force-load the demo system, and verify DEMO/SRC/COUNTER:VALUE returns 2. Dependencies are preinstalled; do not install anything.",
       "shouldTrigger": true,
-      "fixtures": {
-        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/counter\"))\n",
-        "src/counter.lisp": "(uiop:define-package #:demo/src/counter (:use #:cl) (:export #:value))\n(in-package #:demo/src/counter)\n(defun value () 2)\n"
-      },
+      "fixtures": "cases/path-spaces/fixtures/",
       "environmentProfile": "cache",
       "scenario": {
         "name": "path-spaces"
@@ -129,7 +122,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -161,10 +155,7 @@
       "group": "holdout",
       "task": "Use $clearing-asdf-fasl-cache. Clear stale cache for the explicit target project in .eval-environment.json. Its cache does not exist. Treat this as a safe no-op and leave sibling foreign-project caches byte-for-byte unchanged. Custom ASDF output translations point into .eval-cache/. Do not change HOME, create caches, or rebuild anything.",
       "shouldTrigger": true,
-      "fixtures": {
-        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/counter\"))\n",
-        "src/counter.lisp": "(uiop:define-package #:demo/src/counter (:use #:cl) (:export #:value))\n(in-package #:demo/src/counter)\n(defun value () 2)\n"
-      },
+      "fixtures": "cases/heldout-missing-cache/fixtures/",
       "environmentProfile": "cache",
       "scenario": {
         "name": "heldout-missing-cache"
@@ -180,7 +171,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -203,10 +195,7 @@
       "group": "development",
       "task": "This demo project still uses old docstrings after recompilation. Diagnose the stale ASDF fasl cache and clear only this project across SBCL versions, preserving other projects. This project uses custom ASDF output translations under .eval-cache/. Inspect .eval-environment.json for exact projectPaths and foreignPaths. Do not change HOME. After removing stale entries, configure ASDF output translations to .eval-cache/rebuilt/, force-load the demo system, and verify DEMO/SRC/COUNTER:VALUE returns 2. Dependencies are preinstalled; do not install anything.",
       "shouldTrigger": true,
-      "fixtures": {
-        "demo.asd": "(asdf:defsystem \"demo\" :class :package-inferred-system :depends-on (\"demo/src/counter\"))\n",
-        "src/counter.lisp": "(uiop:define-package #:demo/src/counter (:use #:cl) (:export #:value))\n(in-package #:demo/src/counter)\n(defun value () 2)\n"
-      },
+      "fixtures": "cases/automatic/fixtures/",
       "environmentProfile": "cache",
       "scenario": {
         "name": "automatic"
@@ -222,7 +211,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -254,7 +244,6 @@
       "group": "development",
       "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
       "shouldTrigger": false,
-      "fixtures": {},
       "environmentProfile": "cache",
       "scenario": {
         "name": "negative"
@@ -270,7 +259,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }

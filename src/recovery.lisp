@@ -1,6 +1,7 @@
 ;;;; Preserve native timeout evidence before an isolated provider workspace expires.
 (uiop:define-package #:40ants-ai-evals/recovery
   (:use #:cl)
+  (:import-from #:40ants-ai-evals/case-resources)
   (:import-from #:serapeum #:-> #:dict)
   (:import-from #:40ants-ai-evals/collector)
   (:import-from #:40ants-ai-evals/environments #:finalize)
@@ -57,7 +58,8 @@ copied: only the sample workspace and an already saved confined provider trace."
             (setf (gethash "files" snapshot) files
                   (gethash "artifacts" snapshot) artifacts
                   (gethash "changes" snapshot)
-                  (40ants-ai-evals/collector::sample-changes files artifacts (field vars "fixtures"))
+                  (40ants-ai-evals/collector::sample-changes
+                   files artifacts (40ants-ai-evals/case-resources:baseline-manifest vars))
                   (gethash "available" snapshot) (bool t)))
           (when (and trace-path (probe-file trace-path))
             (unless (uiop:subpathp (truename trace-path)

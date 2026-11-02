@@ -1,0 +1,7 @@
+(assert (string= "token" (demo/src/process:current-token)))
+(assert (some (lambda (node)
+                (equal node '(:string :stripped t)))
+              (nodes (definition "src/process.lisp" "defun" "current-token"))))
+(assert (not (some (lambda (node)
+                     (op-p node "string-right-trim"))
+                   (nodes (forms "src/process.lisp")))))

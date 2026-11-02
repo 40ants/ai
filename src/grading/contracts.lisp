@@ -1,6 +1,7 @@
 ;;;; Domain-independent grading of a declared, extensible check plan.
 (uiop:define-package #:40ants-ai-evals/grading/contracts
   (:use #:cl)
+  (:import-from #:40ants-ai-evals/case-resources #:*sample-directory*)
   (:import-from #:yason)
   (:import-from #:serapeum #:-> #:dict)
   (:import-from #:40ants-ai-evals/util #:field #:true-p #:bool #:decode)
@@ -8,11 +9,12 @@
   (:export #:grade))
 (in-package #:40ants-ai-evals/grading/contracts)
 
-(-> grade (t hash-table)
+(-> grade (t hash-table &key (:sample-directory t))
     hash-table)
-(defun grade (output vars)
+(defun grade (output vars &key sample-directory)
   "Run the case's registered checks; infrastructure errors propagate to the collector."
-  (let ((sample (if (stringp output)
+  (let ((*sample-directory* (or sample-directory *sample-directory*))
+        (sample (if (stringp output)
                     (handler-case (decode output)
                       (error () (return-from grade
                                   (dict "pass" 'yason:false "score" 0

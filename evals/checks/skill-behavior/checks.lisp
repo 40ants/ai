@@ -1,6 +1,7 @@
 ;;;; Independent archived-evidence assertions; never grade assistant prose as execution.
 (uiop:define-package #:40ants-ai-evals-skill-behavior-checks/checks
   (:use #:cl)
+  (:import-from #:40ants-ai-evals/case-resources #:restore-sample #:resolve-resource)
   (:import-from #:cl-ppcre)
   (:import-from #:serapeum #:-> #:dict)
   (:import-from #:40ants-ai-evals/util
@@ -8,7 +9,7 @@
                 #:root #:at #:safe-relative-p #:write-text #:temporary-directory
                 #:remove-directory #:run-command)
   (:import-from #:40ants-ai-evals/checks
-                #:register-check #:context-sample #:outcome #:cached))
+                #:register-check #:context-sample #:context-vars #:outcome #:cached))
 (in-package #:40ants-ai-evals-skill-behavior-checks/checks)
 
 (-> exact-file (hash-table hash-table)
@@ -67,6 +68,7 @@
            (sequence-list (field params "requirements")))))))
 
 (defvar *runtime-helpers*)
+(defvar *runtime-timeout* 60)
 
 (-> runtime-check (hash-table hash-table)
     hash-table)
@@ -79,10 +81,7 @@
              (let ((scratch (temporary-directory "skill-runtime")))
                (unwind-protect
                     (progn
-                      (maphash (lambda (path text)
-                                 (when (and (safe-relative-p path) (stringp text))
-                                   (write-text (at scratch path) text)))
-                               (field (context-sample context) "files"))
+                      (restore-sample (context-sample context) scratch)
                       (let ((script (at scratch ".behavior-check.lisp")))
                         (write-text script
                          (format nil
@@ -92,7 +91,12 @@
                           (namestring scratch)
                           (sequence-list (field params "systems"))
                           (sequence-list (field params "loadFiles"))
-                          *runtime-helpers* (field params "assertions")
+                          *runtime-helpers*
+                          (if (field params "assertionsFile")
+                              (format nil "(load ~S :verbose nil :print nil)"
+                                      (namestring (resolve-resource (context-vars context)
+                                                                    (field params "assertionsFile"))))
+                              (field params "assertions"))
                           "SKILL_RUNTIME_OK"))
                         (multiple-value-bind (stdout stderr status)
                             (run-command (list "env"
@@ -101,7 +105,7 @@
                                                            (at scratch ".cache/")))
                                                "ros" "-Q" "run" "--" "--script"
                                                (namestring script))
-                                         :directory scratch :timeout 60 :allow-failure t)
+                                         :directory scratch :timeout *runtime-timeout* :allow-failure t)
                           (dict "pass" (and (zerop status)
                                              (not (null (search "SKILL_RUNTIME_OK" stdout))))
                                 "reason" (if (zerop status) stdout stderr)))))
@@ -298,9 +302,18 @@
 (register-check "skill/exact-file" 'exact-file
                 :parameters (dict "file" "string" "text" "string"))
 (register-check "skill/tool-trace" 'trace-check :parameters (dict "requirements" "array"))
+(-> runtime-parameters-p (hash-table)
+    boolean)
+(defun runtime-parameters-p (params)
+  (not (eq (nth-value 1 (gethash "assertions" params))
+           (nth-value 1 (gethash "assertionsFile" params)))))
+
 (register-check "skill/lisp-runtime" 'runtime-check
-                :parameters (dict "loadFiles" "array" "systems" "array" "assertions" "string")
-                :defaults (dict "loadFiles" #() "systems" #()))
+                :parameters (dict "loadFiles" "array" "systems" "array"
+                                  "assertions" "string" "assertionsFile" "file")
+                :defaults (dict "loadFiles" #() "systems" #())
+                :optional-parameters '("assertions" "assertionsFile")
+                :validate 'runtime-parameters-p)
 (register-check "skill/cache-state" 'cache-check
                 :parameters (dict "missing" "boolean")
                 :defaults (dict "missing" 'yason:false))

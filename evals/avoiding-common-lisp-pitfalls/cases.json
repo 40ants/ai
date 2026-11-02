@@ -8,9 +8,7 @@
       "group": "development",
       "task": "Use $avoiding-common-lisp-pitfalls. Implement CAPTURE-ARGUMENT(text) in src/process.lisp by invoking /usr/bin/printf with format %s and the provided argument through UIOP:RUN-PROGRAM. Return stdout exactly; whitespace and shell metacharacters are literal.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/process.lisp": "(uiop:define-package #:demo/src/process\n  (:use #:cl)\n  (:export #:capture-argument #:current-token #:exercise-events #:item-label)\n)\n(in-package #:demo/src/process)\n\n"
-      },
+      "fixtures": "cases/smoke/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "smoke"
@@ -26,7 +24,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -38,7 +37,7 @@
               "src/process.lisp"
             ],
             "systems": [],
-            "assertions": "(let ((text \"literal ; $(printf BAD) `echo BAD` a b\"))\n(assert (string= text (demo/src/process:capture-argument text))))"
+            "assertionsFile": "cases/smoke/assertions.lisp"
           }
         }
       ]
@@ -53,9 +52,7 @@
       "group": "development",
       "task": "Use $avoiding-common-lisp-pitfalls. Implement CURRENT-TOKEN in src/process.lisp by running /usr/bin/printf with \"token\\n\", returning a string without the trailing newline through UIOP output specification. Do not manually trim it.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/process.lisp": "(uiop:define-package #:demo/src/process\n  (:use #:cl)\n  (:export #:capture-argument #:current-token #:exercise-events #:item-label)\n)\n(in-package #:demo/src/process)\n\n"
-      },
+      "fixtures": "cases/stripped-output/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "stripped-output"
@@ -71,7 +68,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -83,7 +81,7 @@
               "src/process.lisp"
             ],
             "systems": [],
-            "assertions": "(assert (string= \"token\" (demo/src/process:current-token)))\n(assert (some (lambda (node) (equal node '(:string :stripped t)))\n              (nodes (definition \"src/process.lisp\" \"defun\" \"current-token\"))))\n(assert (not (some (lambda (node) (op-p node \"string-right-trim\"))\n                  (nodes (forms \"src/process.lisp\")))))"
+            "assertionsFile": "cases/stripped-output/assertions.lisp"
           }
         }
       ]
@@ -98,9 +96,7 @@
       "group": "development",
       "task": "Use $avoiding-common-lisp-pitfalls. Implement EXERCISE-EVENTS in src/process.lisp using event-emitter. Create emitter, register a listener on :tick, emit 7, remove listener, emit 9. Return the list of values observed, which must be (7).",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/process.lisp": "(uiop:define-package #:demo/src/process\n  (:use #:cl)\n  (:export #:capture-argument #:current-token #:exercise-events #:item-label)\n)\n(in-package #:demo/src/process)\n\n"
-      },
+      "fixtures": "cases/event-order/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "event-order"
@@ -116,7 +112,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -130,7 +127,7 @@
             "systems": [
               "event-emitter"
             ],
-            "assertions": "(assert (equal '(7) (demo/src/process:exercise-events)))"
+            "assertionsFile": "cases/event-order/assertions.lisp"
           }
         }
       ]
@@ -145,10 +142,7 @@
       "group": "holdout",
       "task": "Use $avoiding-common-lisp-pitfalls. Dependency demo/base has LABEL on ITEM returning 42. In src/process.lisp add subclass NAMED-ITEM and an ITEM-LABEL factory returning a NAMED-ITEM whose LABEL returns \"custom\". Preserve the dependency generic behavior for ordinary ITEM instances.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/process.lisp": "(uiop:define-package #:demo/src/process\n  (:use #:cl)\n  (:export #:capture-argument #:current-token #:exercise-events #:item-label)\n)\n(in-package #:demo/src/process)\n\n",
-        "src/base.lisp": "(uiop:define-package #:demo/base\n  (:use #:cl)\n  (:export #:item #:label)\n)\n(in-package #:demo/base)\n(defclass item () ())\n(defgeneric label (item))\n(defmethod label ((item item)) 42)\n"
-      },
+      "fixtures": "cases/heldout-method-preservation/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "heldout-method-preservation"
@@ -164,7 +158,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -177,7 +172,7 @@
               "src/process.lisp"
             ],
             "systems": [],
-            "assertions": "(assert (= 42 (demo/base:label (make-instance 'demo/base:item))))\n(assert (string= \"custom\" (demo/base:label (demo/src/process:item-label))))"
+            "assertionsFile": "cases/heldout-method-preservation/assertions.lisp"
           }
         }
       ]
@@ -192,9 +187,7 @@
       "group": "development",
       "task": "Implement CAPTURE-ARGUMENT(text) in src/process.lisp with UIOP:RUN-PROGRAM calling /usr/bin/printf %s. Return its stdout exactly, with literal whitespace and shell metacharacters in text.",
       "shouldTrigger": true,
-      "fixtures": {
-        "src/process.lisp": "(uiop:define-package #:demo/src/process\n  (:use #:cl)\n  (:export #:capture-argument #:current-token #:exercise-events #:item-label)\n)\n(in-package #:demo/src/process)\n\n"
-      },
+      "fixtures": "cases/automatic/fixtures/",
       "environmentProfile": "lisp",
       "scenario": {
         "name": "automatic"
@@ -210,7 +203,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }
@@ -222,7 +216,7 @@
               "src/process.lisp"
             ],
             "systems": [],
-            "assertions": "(let ((text \"literal ; $(printf BAD) `echo BAD` a b\"))\n(assert (string= text (demo/src/process:capture-argument text))))"
+            "assertionsFile": "cases/automatic/assertions.lisp"
           }
         }
       ]
@@ -237,7 +231,6 @@
       "group": "development",
       "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
       "shouldTrigger": false,
-      "fixtures": {},
       "environmentProfile": "lisp",
       "scenario": {
         "name": "negative"
@@ -253,7 +246,8 @@
           "check": "files/preserved",
           "params": {
             "fixtures": {
-              "$var": "fixtures"
+              "$var": "fixtures",
+              "default": {}
             },
             "protected": null
           }

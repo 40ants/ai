@@ -36,7 +36,7 @@ A missing variable is an error unless the reference includes a `default`:
 `{"$var":"override","default":false}`. Each check's parameter schema is
 strict: missing, unknown and incorrectly typed fields fail before model calls.
 Supported types are `string`, `integer`, `number`, `boolean`, `object`, `array`,
-`nullable-string` and `any`.
+`nullable-string`, `file` and `any`.
 
 Use `when` or `unless` to name a case variable:
 
@@ -132,6 +132,27 @@ tests invoke it in a separate Roswell process with both clean text and FIXME tex
 unless `:defaults` supplies a value. Defaults can be overridden in a descriptor.
 Re-registering the same handler supports reloads; a different handler using the
 same ID is rejected. Namespace IDs to avoid collisions.
+
+The `file` parameter type accepts a suite-relative path to an existing regular
+file. Validation rejects missing files, absolute paths, parent traversal,
+symlinks in any component and special files before any model call. Use
+`40ants-ai-evals/case-resources:resolve-resource` with `context-vars` in your
+handler to read the same snapshotted file. File parameters are included in the
+case input fingerprint automatically.
+
+Use `:optional-parameters '("inline" "file")` when parameters are alternatives.
+Undeclared optional fields remain errors; absent optional fields are not added
+to the parameter object. A validator can require exactly one alternative.
+The runtime check uses `assertions` for legacy inline code and `assertionsFile`
+for ordinary Lisp files; authored cases use the latter.
+
+Fixture paths in `vars.fixtures` name directories relative to the suite. Store
+inputs under `cases/CASE_ID/fixtures/`, alongside `assertions.lisp`; omit the
+field for cases without starting files. Fixture directories support binary
+files and preserve executable bits. `baseline-manifest` and `sample-manifest`
+provide byte-oriented evidence to custom checks, and `restore-sample` restores
+archived text and binary candidate files into a checking workspace. None of
+these helpers follows symbolic links.
 
 For domain constraints, supply `:validate 'validator-function`. The validator
 receives the resolved parameter object and must return a true Lisp value or
