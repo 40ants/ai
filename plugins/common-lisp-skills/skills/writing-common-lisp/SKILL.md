@@ -65,13 +65,31 @@ Use the fully qualified `serapeum:->`, or `->` with an explicit
 `(declaim (ftype ...))`, parameter `(declare (type ...))` forms, inferred types,
 and type descriptions in docstrings do **not** satisfy this convention.
 
-"Do not install dependencies" still permits using Serapeum already available
-in the project. Preserve explicit project overrides from `AGENTS.md` or
-`ai/cl-style.md` as described above.
+Write each signature and its function together, rather than adding signatures
+as a final cleanup. Declare the Serapeum dependency in `uiop:define-package`
+with `(:import-from #:serapeum #:->)` even when calling `serapeum:->` by its
+full name: package-inferred ASDF uses package dependencies to load libraries.
 
-Before finishing, inspect every function you added and verify that its matching
-`serapeum:->` signature is present in the written source. Use
-`(declare (ignore var))` for unused parameters.
+"Do not install dependencies" prohibits downloading or installing libraries;
+it does not prohibit loading a library already provisioned by the project.
+An empty source directory or `(find-package :serapeum)` returning `nil` does
+not establish that Serapeum is unavailable: a fresh image has not loaded its
+packages yet. Start Lisp through the project's existing Qlot/Roswell/Nix
+entry point, then check `(asdf:find-system "serapeum" nil)` and load the
+available system with `(asdf:load-system "serapeum")` before loading the new
+source. This needs no new `.asd` file and no dependency installation. Keep
+this bootstrap in the verification command, not in the source module.
+
+If Serapeum really cannot be found after the project bootstrap, report the
+missing prerequisite instead of silently replacing `->` with `declaim`,
+omitting the signature, or defining a substitute macro. Preserve explicit
+project overrides from `AGENTS.md` or `ai/cl-style.md` as described above.
+
+Before finishing, inspect the actual source: every added function must have
+its adjacent `->` signature, a return-value form on its own four-space-indented
+line, and an explicit Serapeum package dependency. Verify loading with the
+project's installed dependencies. Use `(declare (ignore var))` for unused
+parameters.
 
 ## Control flow and iteration
 - `loop` **without** keyword style — write `(loop for x in list while (...) do ...)`; do **not** use `:for`, `:do`, `:while`.
