@@ -40,8 +40,9 @@
                               (1+ (or (position #\Newline source
                                                 :end return-start :from-end t)
                                       -1)))))
-        (and (= (length form) 4) return-start
-             (string= (subseq source line-start return-start) "    "))))))
+        (and (= (length form) 4) return-start (> line-start start)
+             (every (lambda (char) (find char '(#\Space #\Tab)))
+                    (subseq source line-start return-start)))))))
 
 (serapeum:-> read-source (string)
     (values list list &optional))

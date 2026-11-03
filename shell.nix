@@ -62,13 +62,24 @@ let
     if [ "''${1:-}" = exec ] && [ ! -f .qlot/setup.lisp ] && [ -n "''${SKILL_EVAL_DEPENDENCY_ROOT:-}" ]; then
       shift
       export QUICKLISP_HOME="$SKILL_EVAL_DEPENDENCY_ROOT/.qlot/"
+      export ROSWELL_HOME="''${ROSWELL_HOME:-$SKILL_EVAL_DEPENDENCY_ROOT/.evals/roswell}"
+      unset CL_SOURCE_REGISTRY ASDF_OUTPUT_TRANSLATIONS
       case "''${1##*/}" in
         ros)
           shift
-          exec ros -Q -l ${./nix/lisp-init.lisp} "$@"
+          exec ros "$@"
           ;;
       esac
       exec "$@"
+    fi
+    # Qlot's native exec checks the project, then prepends .qlot/bin. Restore
+    # pinned dispatch for the child, including nested exec inside sh/pipelines.
+    # Our SBCL/Roswell wrappers already load the project Quicklisp explicitly.
+    if [ "''${1:-}" = exec ] && [ "$#" -gt 1 ] && [ -n "''${SKILL_EVAL_TOOL_PATH:-}" ]; then
+      case "$2" in
+        --*) ;;
+        *) shift; set -- exec ${pkgs.coreutils}/bin/env "PATH=$SKILL_EVAL_TOOL_PATH" "$@" ;;
+      esac
     fi
     exec ${qlotRuntime}/bin/sbcl --noinform --no-userinit --no-sysinit \
       --non-interactive --eval '(require :asdf)' \
@@ -77,7 +88,21 @@ let
       --eval '(let ((*standard-output* *error-output*)) (asdf:load-system "qlot/cli"))' \
       --eval '(qlot/cli:main)' -- "$@"
   '';
+  # Native qlot exec prepends .qlot/bin. Keep recursive invocations on the
+  # pinned tool wrappers, including ASDF tests started without our main CLI.
+  ros = pkgs.writeShellScriptBin "ros" ''
+    if [ -n "''${SKILL_EVAL_TOOL_PATH:-}" ]; then
+      export PATH="$SKILL_EVAL_TOOL_PATH"
+    fi
+    case "''${1:-}" in
+      --version|--help) exec ${pkgs.roswell}/bin/ros "$@" ;;
+    esac
+    exec ${pkgs.roswell}/bin/ros -Q -l ${./nix/lisp-init.lisp} "$@"
+  '';
   sbcl = pkgs.writeShellScriptBin "sbcl" ''
+    if [ -n "''${SKILL_EVAL_TOOL_PATH:-}" ]; then
+      export PATH="$SKILL_EVAL_TOOL_PATH"
+    fi
     case "''${1:-}" in
       --version|--help) exec ${pkgs.sbcl}/bin/sbcl "$@" ;;
       --noinform) shift ;;
@@ -85,7 +110,7 @@ let
     exec ${pkgs.sbcl}/bin/sbcl --noinform --no-userinit --no-sysinit --load ${./nix/lisp-init.lisp} "$@"
   '';
   environments = import ./nix/eval-environments.nix { inherit pkgs; };
-  evalTools = environments.packages ++ [ toolchain pkgs.nodejs_22 sbcl pkgs.roswell qlot pkgs.curl pkgs.openssl pkgs.git pkgs.ripgrep apm
+  evalTools = environments.packages ++ [ toolchain pkgs.nodejs_22 sbcl ros qlot pkgs.curl pkgs.openssl pkgs.git pkgs.ripgrep apm
     pkgs.bashInteractive pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.gnused
     pkgs.gnutar pkgs.which pkgs.opencode ];
 in

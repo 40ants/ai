@@ -3,7 +3,17 @@
   (:import-from #:40ants-doc/changelog #:defchangelog))
 (in-package #:40ants-ai-evals-docs/changelog)
 
-(defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP"))
+(defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum"))
+  (0.4.2 2026-11-04
+         "* Added fractional check scores while preserving mandatory pass decisions.
+* Awarded half credit for inline Serapeum return types and full credit for
+return types on a separate line. Missing signatures remain failures.")
+  (0.4.1 2026-11-04
+         "* Isolated sample ASDF system discovery from unrelated fixture projects.
+* Added prepared runtime instructions and Qlot execution preflight to all suites.
+* Supplied real ASDF project fixtures for the original Lisp writing tasks.
+* Routed the prepared agent shell through Qlot for complete compound commands.
+* Retained UIOP bootstrap diagnostics in sample logs instead of tool output.")
   (0.4.0 2026-11-02
          "* Moved runtime assertions and fixture projects into per-case files.
 * Added binary fixture baselines, executable permission tracking and confined

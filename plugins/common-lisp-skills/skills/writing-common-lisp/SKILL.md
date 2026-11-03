@@ -44,6 +44,27 @@ Rules:
 ## File layout
 `;;;;` file comment → `(in-package ...)` as the **first executable form** → optional file-specific `declaim` → definitions. One blank line between top-level forms.
 
+## Commands and verification
+Run every shell command for this skill through `qlot exec` from the project
+directory, including source inspection, Lisp, builds, tests and linters.
+For pipelines, wrap the whole command: `qlot exec sh -c '...'`, and keep
+`qlot exec` on Lisp invocations inside it as well. Use the
+project's existing Qlot environment; do not search personal Quicklisp trees
+or `/nix/store`, or create a new dependency installation.
+
+Verify a standalone file by loading its dependencies and then the file:
+
+```sh
+qlot exec sbcl --non-interactive \
+  --eval '(asdf:load-system "serapeum")' \
+  --load path/to/module.lisp
+```
+
+When the task concerns an existing ASDF project, use its actual system and
+entry point. A package-inferred root system loads only its declared
+dependencies; loading the root does not load every module. Do not create
+ASDF scaffolding merely to verify a standalone source file.
+
 ## Types
 Every newly added function **must have a `serapeum:->` signature**, including
 non-exported helper functions. Place the signature immediately before its
@@ -74,8 +95,8 @@ full name: package-inferred ASDF uses package dependencies to load libraries.
 it does not prohibit loading a library already provisioned by the project.
 An empty source directory or `(find-package :serapeum)` returning `nil` does
 not establish that Serapeum is unavailable: a fresh image has not loaded its
-packages yet. Start Lisp through the project's existing Qlot/Roswell/Nix
-entry point, then check `(asdf:find-system "serapeum" nil)` and load the
+packages yet. Use `qlot exec sbcl` (or `qlot exec ros`) from the project,
+then check `(asdf:find-system "serapeum" nil)` and load the
 available system with `(asdf:load-system "serapeum")` before loading the new
 source. This needs no new `.asd` file and no dependency installation. Keep
 this bootstrap in the verification command, not in the source module.

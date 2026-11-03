@@ -48,7 +48,7 @@ The hook must return an already decoded JSON value, or text when RAW-P is true."
    (loop for name in '("PATH" "SHELL" "LANG" "LC_ALL" "TMPDIR" "SSL_CERT_FILE"
                         "SSL_CERT_DIR" "NIX_SSL_CERT_FILE" "HTTP_PROXY" "HTTPS_PROXY"
                         "ALL_PROXY" "NO_PROXY" "SKILL_EVAL_DEPENDENCY_ROOT"
-                        "SKILL_EVAL_TOOL_PATH" "SKILL_EVAL_SHELL"
+                        "SKILL_EVAL_TOOL_PATH" "SKILL_EVAL_SHELL" "ROSWELL_HOME"
                         "PLAYWRIGHT_BROWSER_PATH" "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" "SKILL_EVAL_PYTHON" "SKILL_EVAL_CHROMIUM_REVISION" "SKILL_EVAL_CHROMIUM_VERSION" "SKILL_EVAL_PLAYWRIGHT_VERSION" "SKILL_EVAL_ENVIRONMENT_NIXPKGS" "SKILL_EVAL_NIXPKGS_PATH" "NIX_PATH" "NIX_SSL_CERT_FILE" "SSL_CERT_FILE")
          for value = (uiop:getenv name)
          when value collect (format nil "~A=~A" name value))

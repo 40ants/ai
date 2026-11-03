@@ -225,12 +225,16 @@
     (multiple-value-bind (value present-p) (gethash key cache)
       (if present-p value (setf (gethash key cache) (funcall compute))))))
 
-(-> outcome (string t &key (:reason (or null string)))
+(-> outcome (string t &key (:reason (or null string)) (:score real))
     hash-table)
-(defun outcome (name pass &key reason)
-  "Return one boolean check result with an optional failure explanation."
-  (let ((result (dict "name" name "pass" (bool pass))))
-    (when (and reason (not pass)) (setf (gethash "reason" result) reason))
+(defun outcome (name pass &key reason (score (if pass 1d0 0d0)))
+  "Return a mandatory pass decision and a score from 0 to 1, defaulting to 0 or 1.
+A passing result may award partial credit; its reason remains available."
+  (unless (and (realp score) (<= 0 score 1))
+    (error "Check score must be a real number in [0, 1]: ~S" score))
+  (let ((result (dict "name" name "pass" (bool pass) "score" (float score 1d0))))
+    (when (and reason (or (not pass) (< score 1)))
+      (setf (gethash "reason" result) reason))
     result))
 
 (-> execute-plan (hash-table list)
@@ -248,6 +252,12 @@
         (unless (and (stringp (field result "name"))
                      (member (field result "pass") '(yason:true yason:false)))
           (error "Check ~A returned an invalid outcome: ~S" id result))
+        ;; Historical and third-party handlers may return bare boolean outcomes.
+        (let ((score (gethash "score" result
+                              (if (true-p (field result "pass")) 1d0 0d0))))
+          (unless (and (realp score) (<= 0 score 1))
+            (error "Check ~A returned an invalid score: ~S" id score))
+          (setf (gethash "score" result) (float score 1d0)))
         (setf (gethash "checkId" result) id))
       results)))
 

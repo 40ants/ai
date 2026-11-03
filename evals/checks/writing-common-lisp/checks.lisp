@@ -96,8 +96,9 @@
                  (options (field analysis "options")) (all (field analysis "all"))
                  (exports (field analysis "exports")) (definition (field analysis "definition")))
              (declare (ignorable data forms package-form options all exports definition))
-             (multiple-value-bind (pass reason) (progn ,@body)
-               (outcome ,label pass :reason (and (not pass) reason)))))))
+             (multiple-value-bind (pass reason score) (progn ,@body)
+               (outcome ,label pass :reason reason
+                        :score (if (null score) (if pass 1d0 0d0) score)))))))
      (register-check ,id ',name :parameters *source-parameters*
                      :defaults (dict "override" 'yason:false "argument" :null "hook" :null))))
 
@@ -145,9 +146,20 @@
     (if (true-p (field params "override")) (null signatures) signatures)))
 
 (define-source-check signature-layout "cl/return-type-layout" "return-type-layout"
-  (let ((layouts (sequence-list (field data "signatureLayouts"))))
-    (and (eq :null (field data "readError")) layouts
-         (every (lambda (item) (eql item 1)) layouts))))
+  (let* ((layouts (sequence-list (field data "signatureLayouts")))
+         (signature
+           (find-if (lambda (form)
+                      (and (form-p form "->")
+                           (equal (field (element form 0) "p")
+                                  (package-name (symbol-package '->)))
+                           (equal (symbol-text (element form 1)) (field params "function"))))
+                    forms)))
+    (cond
+      ((not (and (eq :null (field data "readError")) signature layouts))
+       (values nil "Missing Serapeum -> signature for the function." 0d0))
+      ((every (lambda (item) (eql item 1)) layouts)
+       (values t nil 1d0))
+      (t (values t "Return type must start on a separate line." 0.5d0)))))
 
 (define-source-check no-runtime-eval "cl/no-runtime-eval" "no-runtime-eval-intern-unintern"
   (notany (lambda (node)

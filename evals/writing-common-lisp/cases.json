@@ -18,7 +18,8 @@
         {
           "profile": "common-lisp/source"
         }
-      ]
+      ],
+      "fixtures": "cases/package-path/fixtures/"
     }
   },
   {
@@ -40,7 +41,8 @@
         {
           "profile": "common-lisp/source"
         }
-      ]
+      ],
+      "fixtures": "cases/loop-style/fixtures/"
     }
   },
   {
@@ -63,7 +65,8 @@
         {
           "profile": "common-lisp/source"
         }
-      ]
+      ],
+      "fixtures": "cases/exhaustive-dispatch/fixtures/"
     }
   },
   {
@@ -85,7 +88,8 @@
         {
           "profile": "common-lisp/source"
         }
-      ]
+      ],
+      "fixtures": "cases/formatted-error/fixtures/"
     }
   },
   {
@@ -107,7 +111,8 @@
         {
           "profile": "common-lisp/source"
         }
-      ]
+      ],
+      "fixtures": "cases/unused-argument/fixtures/"
     }
   },
   {
@@ -129,7 +134,8 @@
         {
           "profile": "common-lisp/source"
         }
-      ]
+      ],
+      "fixtures": "cases/hook-contract/fixtures/"
     }
   },
   {
@@ -206,7 +212,8 @@
         {
           "profile": "common-lisp/source"
         }
-      ]
+      ],
+      "fixtures": "cases/heldout-path/fixtures/"
     }
   },
   {
@@ -227,7 +234,8 @@
         {
           "profile": "common-lisp/source"
         }
-      ]
+      ],
+      "fixtures": "cases/heldout-format/fixtures/"
     }
   }
 ]

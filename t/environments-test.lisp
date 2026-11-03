@@ -47,7 +47,7 @@
       (ok (null (field config "mcp")))
       (multiple-value-bind (stdout stderr status)
           (run-command (list (field config "shell") "-lc"
-                             "if shopt -q login_shell; then exit 91; fi; command -v sbcl; sbcl --non-interactive --eval '(format t \"SOURCE=~A~%\" (asdf:system-source-directory :yason))'")
+                             "if shopt -q login_shell; then exit 91; fi; test \"$QUICKLISP_HOME\" = \"$SKILL_EVAL_DEPENDENCY_ROOT/.qlot/\" || exit 92; command -v sbcl; sbcl --non-interactive --eval '(format t \"SOURCE=~A~%\" (asdf:system-source-directory :yason))'")
                        :directory workspace :timeout 60 :allow-failure t)
         (ok (zerop status) stderr)
         (ok (uiop:string-prefix-p "/nix/store/" stdout))

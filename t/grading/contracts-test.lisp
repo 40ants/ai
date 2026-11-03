@@ -1,4 +1,4 @@
-;;;; Frozen known-good and known-bad examples from the original 22 test groups.
+;;;; Frozen sources with current scoring expectations; legacyExpected retains old scores.
 (uiop:define-package #:40ants-ai-evals-tests/grading/contracts-test
   (:use #:cl)
   (:import-from #:rove #:deftest #:testing #:ok)

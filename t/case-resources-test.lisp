@@ -205,7 +205,7 @@
                       (resolve-resource vars (field params "assertionsFile"))
                       (incf assertions)))))))
       (ok (= 35 assertions))
-      (ok (= 49 fixtures))))
+      (ok (= 57 fixtures))))
 
 (deftest file-assertion-timeout
     (with-input-tree (directory vars)

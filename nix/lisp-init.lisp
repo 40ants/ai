@@ -1,5 +1,7 @@
 ;;;; Project-local Qlot sources and sample-owned ASDF outputs.
 (require :asdf)
+(when (uiop:getenv "SKILL_EVAL_TOOL_PATH")
+  (setf (uiop:getenv "PATH") (uiop:getenv "SKILL_EVAL_TOOL_PATH")))
 (defun cl-user::skill-eval-initialize-output-translations (&optional (workspace (uiop:getcwd)))
   "Reuse provisioned dependency FASLs while confining candidate outputs to WORKSPACE."
   (let* ((root (uiop:ensure-directory-pathname (uiop:getenv "SKILL_EVAL_DEPENDENCY_ROOT")))
@@ -21,4 +23,28 @@
     (cl-user::skill-eval-initialize-output-translations)
     (asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration))
     (load setup :verbose nil :print nil)
-    (pushnew (uiop:getcwd) asdf:*central-registry* :test (function equal))))
+    ;; The bundled ASDF initially provides an older UIOP than this Qlot release.
+    ;; Retain its expected upgrade diagnostics without flooding each tool result.
+    ;; This handler covers only bootstrap redefinitions, never candidate warnings.
+    (let ((log (merge-pathnames ".eval-cache/lisp-startup.log" (uiop:getcwd))))
+      (ensure-directories-exist log)
+      (with-open-file (stream log :direction :output :if-exists :append
+                                  :if-does-not-exist :create :external-format :utf-8)
+        (handler-bind ((sb-kernel:redefinition-warning
+                         (lambda (condition)
+                           (format stream "~A~%" condition)
+                           (muffle-warning condition))))
+          (asdf:load-system "uiop" :verbose nil))))
+    (if (equal (truename root) (truename (uiop:getcwd)))
+        (pushnew (uiop:getcwd) asdf:*central-registry* :test (function equal))
+        (progn
+          ;; Qlot adds a second searcher which otherwise scans every fixture in
+          ;; the harness repository, independently of ASDF source-registry rules.
+          (let ((searcher (find-symbol "PROJECT-SYSTEM-SEARCHER"
+                                       "QLOT/LOCAL-INIT/SETUP")))
+            (setf asdf:*system-definition-search-functions*
+                  (remove searcher asdf:*system-definition-search-functions*)))
+          (setf asdf:*central-registry* (list (uiop:getcwd)))
+          (asdf:initialize-source-registry
+           `(:source-registry (:tree ,(uiop:getcwd))
+             :ignore-inherited-configuration))))))

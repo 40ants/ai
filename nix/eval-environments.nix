@@ -21,7 +21,8 @@ let
         -l|--login) shift ;;
         -lc|-cl) shift; set -- -c "$@" ;;
       esac
-      exec ${pkgs.bashInteractive}/bin/bash --noprofile --norc "$@"
+      # Enter Qlot for the complete command, including every pipeline segment.
+      exec qlot exec ${pkgs.bashInteractive}/bin/bash --noprofile --norc "$@"
     '';
   };
   linter = pkgs.writeShellScriptBin "40ants-linter" ''

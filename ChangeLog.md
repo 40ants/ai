@@ -2,6 +2,24 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E2-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.2 (2026-11-04)
+
+* Added fractional check scores while preserving mandatory pass decisions.
+* Awarded half credit for inline Serapeum return types and full credit for
+return types on a separate line. Missing signatures remain failures.
+
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E1-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.1 (2026-11-04)
+
+* Isolated sample `ASDF` system discovery from unrelated fixture projects.
+* Added prepared runtime instructions and Qlot execution preflight to all suites.
+* Supplied real `ASDF` project fixtures for the original Lisp writing tasks.
+* Routed the prepared agent shell through Qlot for complete compound commands.
+* Retained `UIOP` bootstrap diagnostics in sample logs instead of tool output.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.0 (2026-11-02)

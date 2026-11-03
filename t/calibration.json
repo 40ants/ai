@@ -76,6 +76,11 @@
     "expected": {
       "pass": false,
       "score": 0.8888888888888888,
+      "reason": "type-signature; return-type-layout:Missing Serapeum -> signature for the function."
+    },
+    "legacyExpected": {
+      "pass": false,
+      "score": 0.8888888888888888,
       "reason": "type-signature; return-type-layout"
     }
   },
@@ -278,6 +283,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 0.9722222222222222,
+      "reason": "All mandatory checks passed; partial credit: return-type-layout=0.5 (Return type must start on a separate line.)"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -294,6 +304,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 1.0,
+      "reason": "18 checks passed"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -310,6 +325,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 1.0,
+      "reason": "18 checks passed"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -326,6 +346,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 1.0,
+      "reason": "18 checks passed"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -342,6 +367,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 1.0,
+      "reason": "18 checks passed"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -358,6 +388,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 1.0,
+      "reason": "18 checks passed"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -374,6 +409,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": false,
+      "score": 0.9444444444444444,
+      "reason": "no-tabs"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.8888888888888888,
       "reason": "no-tabs; return-type-layout"
@@ -438,6 +478,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 0.9722222222222222,
+      "reason": "All mandatory checks passed; partial credit: return-type-layout=0.5 (Return type must start on a separate line.)"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -454,6 +499,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 0.9722222222222222,
+      "reason": "All mandatory checks passed; partial credit: return-type-layout=0.5 (Return type must start on a separate line.)"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -470,6 +520,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 0.9722222222222222,
+      "reason": "All mandatory checks passed; partial credit: return-type-layout=0.5 (Return type must start on a separate line.)"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -518,6 +573,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 1.0,
+      "reason": "18 checks passed"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"
@@ -550,6 +610,11 @@
       "runtime": "add-score"
     },
     "expected": {
+      "pass": true,
+      "score": 0.9722222222222222,
+      "reason": "All mandatory checks passed; partial credit: return-type-layout=0.5 (Return type must start on a separate line.)"
+    },
+    "legacyExpected": {
       "pass": false,
       "score": 0.9444444444444444,
       "reason": "return-type-layout"

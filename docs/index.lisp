@@ -23,7 +23,7 @@
                                    "Codex" "Common Lisp" "Git" "GitHub" "HTTP"
                                    "JSON" "MCP" "Nix" "OpenCode" "Promptfoo"
                                    "Qlot" "Quicklisp" "README" "REPL" "Roswell"
-                                   "SBCL" "SDK" "Serapeum" "SQL" "Unlicense" "URL"
+                                   "SBCL" "SDK" "UIOP" "Serapeum" "SQL" "Unlicense" "URL"
                                    "USD" "XDG" "`SQLite`" "MIT" "VPS" "CLOS"
                                    "EFFORT" "HEAD" "HTML" "ID" "ISO" "JS" "JSONL"
                                    "PATH" "SHA-256" "SSE" "SSH" "PNG"
@@ -237,6 +237,18 @@ The shell uses a PATH made from those Nix packages plus `macOS` system utilities
 Global/Homebrew executables are excluded. SBCL user initialization is disabled;
 Roswell state, compilation caches and Qlot download caches stay under `.evals/`.
 Libraries are installed under `.qlot/`; personal Quicklisp is not loaded.
+Run all agent shell commands through `qlot exec`. The prepared OpenCode shell
+enters Qlot for the whole command, including pipeline segments. Each prepared workspace
+describes its runtime in `.eval-environment.json`; the same environment facts
+are supplied to both skill and ablation variants. Sample ASDF discovery is
+restricted to that workspace and the pinned Qlot distribution, so a system
+from another suite cannot satisfy a missing local project. For a standalone
+file, use `qlot exec sbcl --non-interactive --eval '(asdf:load-system "serapeum")'
+--load path/to/module.lisp`; an actual ASDF project instead uses its declared
+entry system. Expected UIOP bootstrap redefinition diagnostics are retained
+in `.eval-cache/lisp-startup.log`. Candidate errors and strict documentation
+warnings are not suppressed. Preflight tests the sample entry point before
+any model call.
 Roswell uses the Nix SBCL and does not install another Lisp implementation.
 Use `qlot install` to restore the lockfile and `qlot update` only for an intentional
 dependency upgrade. Check in both `qlfile` and `qlfile.lock`; do not edit `.qlot/`.
@@ -491,7 +503,14 @@ an evaluation call.
 Cases declare an ordered `vars.checks` array of named checks and profiles.
 `defaultTest.vars.checkSystems` selects independent ASDF systems that register
 those checks. Typed parameters, missing variables and unknown names are
-validated before model calls. The built-in rules retain their previous scores.
+validated before model calls. Boolean checks retain their 0/1 scores;
+graded checks can award partial credit independently of mandatory pass decisions.
+The `return-type-layout` check awards 0 for a missing signature, 0.5 for an
+inline return type and 1 for a return type on a separate line. Partial layout
+credit is accepted; a missing signature fails the case. The aggregate score
+is the mean of check scores. With 20 checks, a single half-credit layout and
+19 full-credit results give 0.975. Original run scores remain unchanged;
+replay applies current scoring into a separate report.
 
 See [Adding independent checks](https://github.com/40ants/ai/blob/master/evals/docs/extending-checks.md) for a complete
 ASDF example and the JSON format, or inspect the runnable example under

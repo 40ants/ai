@@ -206,6 +206,8 @@
     (let* ((vars (field case "vars")) (id (field vars "id")) (workspaces (dict)))
       (unless (and (stringp id) (safe-relative-p id))
         (error "Invalid case ID: ~A" id))
+      (setf (gethash "environmentInstructions" vars)
+            (40ants-ai-evals/environments:workspace-instructions))
       (setf (gethash "taskWithoutSkill" vars)
             (cl-ppcre:regex-replace-all
              (format nil "Use \\$~A(?: and follow this project's conventions)?\\.\\s*"
@@ -219,13 +221,11 @@
             (ensure-directories-exist (at workspace ".keep"))
             (execute (list "git" "init" "--quiet" (namestring workspace)))
             (40ants-ai-evals/case-resources:copy-fixtures vars workspace)
-            (when (and (field vars "suite")
-                       (not (equal (field vars "suite") "writing-common-lisp"))
-                       (not (probe-file (at workspace "AGENTS.md"))))
+            (unless (probe-file (at workspace "AGENTS.md"))
               ;; Environment facts only; assertions and skill-specific advice stay
               ;; out of the prompt. Keep copied samples independent of user projects.
               (write-text (at workspace "AGENTS.md")
-                          (format nil "# Prepared evaluation workspace~%~%Dependencies and tools are already provisioned by the project Nix shell and Qlot. `sbcl` loads that pinned Qlot distribution automatically; use `(asdf:load-system :name)` or `qlot exec ros` from this directory. Lisp dependency sources are under `$SKILL_EVAL_DEPENDENCY_ROOT/.qlot/`; obtain exact paths with ASDF. Do not search or register personal checkouts, user Quicklisp directories, or the whole filesystem. Do not install dependencies or download browsers. Inspect `.eval-environment.json` for fixture-specific paths. Keep work inside this workspace.~%~%Deployment operations use the fixture MCP simulator exclusively. Do not execute real SSH, scp, sftp, sudo or systemctl. Reverse SSH forwarding is forbidden. Ordinary SSH/scp/sftp outside this simulator would require `-o ClearAllForwardings=yes`.~%"))
+                          (format nil "# Prepared evaluation workspace~%~%Dependencies and tools are already provisioned by the project Nix shell and Qlot. Run all shell commands through `qlot exec` from this directory; `qlot exec sbcl` loads that pinned Qlot distribution automatically. For a standalone file, load its dependencies and the file directly; use an ASDF project only when its .asd file exists. Lisp dependency sources are under `$SKILL_EVAL_DEPENDENCY_ROOT/.qlot/`; obtain exact paths with ASDF. Do not search or register personal checkouts, user Quicklisp directories, or the whole filesystem. Do not install dependencies or download browsers. Inspect `.eval-environment.json` for fixture-specific paths. Keep work inside this workspace.~%~%Deployment operations use the fixture MCP simulator exclusively. Do not execute real SSH, scp, sftp, sudo or systemctl. Reverse SSH forwarding is forbidden. Ordinary SSH/scp/sftp outside this simulator would require `-o ClearAllForwardings=yes`.~%"))
               (when (equal (field vars "environmentProfile") "playwright")
                 (with-open-file (out (at workspace "AGENTS.md") :direction :output :if-exists :append
                                      :external-format :utf-8)
@@ -240,8 +240,7 @@
                               (at workspace (format nil "~A/skills/~A/"
                                                     (if (equal agent "codex") ".agents" ".opencode")
                                                     (or (field vars "skillName") "writing-common-lisp")))))
-            (when (and (field vars "suite")
-                       (not (equal (field vars "suite") "writing-common-lisp")))
+            (when (field vars "suite")
               (let ((descriptor (40ants-ai-evals/environments:prepare workspace vars)))
                 (setf (gethash "fixtureScript" descriptor)
                       (namestring (at (at run-dir "harness/") "roswell/fixture-mcp.ros")))
@@ -297,7 +296,7 @@
                 "shell_environment_policy.set.SKILL_EVAL_DEPENDENCY_ROOT" dependency-root))
     ;; The native SDK deliberately inherits only a minimal process environment.
     ;; Pass pinned fixture tools explicitly to both the CLI and its shell tools.
-    (dolist (name '("PLAYWRIGHT_BROWSER_PATH" "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
+    (dolist (name '("ROSWELL_HOME" "PLAYWRIGHT_BROWSER_PATH" "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
                     "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" "SKILL_EVAL_PYTHON"
                     "SKILL_EVAL_CHROMIUM_REVISION" "SKILL_EVAL_CHROMIUM_VERSION"
                     "SKILL_EVAL_PLAYWRIGHT_VERSION" "SKILL_EVAL_ENVIRONMENT_NIXPKGS"
@@ -337,8 +336,9 @@
       (dolist (variant variants)
         (let ((label (provider-label agent variant)))
           (push (dict "id" label "label" label
-                      "raw" (if (equal variant "without-skill") "{{taskWithoutSkill}}"
-                                (format nil "{{task_~A}}" agent))) prompts)
+                      "raw" (format nil "{{environmentInstructions}}~%~%~A"
+                                     (if (equal variant "without-skill") "{{taskWithoutSkill}}"
+                                         (format nil "{{task_~A}}" agent)))) prompts)
           (push (if (equal agent "codex")
                     (codex-provider (field profiles agent) auth-dir variant (at run-dir "harness/"))
                     (dict "id" "file://../lib/opencode-provider.cjs" "label" label

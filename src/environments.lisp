@@ -6,9 +6,10 @@
   (:import-from #:ironclad)
   (:import-from #:40ants-ai-evals/util
                 #:field #:at #:root #:write-json #:read-json #:write-text
-                #:digest-file #:run-command #:tree-files #:copy-directory #:bool)
+                #:digest-file #:run-command #:tree-files #:copy-directory #:bool
+                #:temporary-directory #:remove-directory)
   (:export #:preflight #:prepare #:codex-config #:opencode-config #:finalize
-           #:profile-name #:environment-variables))
+           #:profile-name #:environment-variables #:workspace-instructions))
 (in-package #:40ants-ai-evals/environments)
 
 (-> profile-name (t)
@@ -17,6 +18,38 @@
   "Normalize the environment profile declared by a suite."
   (let ((name (string-downcase (or value "lisp"))))
     (if (string= name "browser") "playwright" name)))
+
+(-> workspace-instructions ()
+    string)
+(defun workspace-instructions ()
+  "Describe runtime facts without revealing any skill or assertion requirement."
+  (format nil "~{~A~^ ~}"
+          '("Prepared workspace: run every shell command through `qlot exec` from this"
+            "directory (including inspection, Lisp, builds and tests). The pinned"
+            "project Qlot libraries are installed. Do not install dependencies or"
+            "search personal Quicklisp, /nix/store, or other projects. Read"
+            "`.eval-environment.json` for runtime facts. For a standalone Lisp file,"
+            "use `qlot exec sbcl --non-interactive --eval '(asdf:load-system \"LIBRARY\")'"
+            "--load path/to/file.lisp`, replacing LIBRARY with its declared dependency."
+            "Load a project through ASDF only when its .asd file is present;"
+            "package-inferred roots do not automatically load every source file."
+            "No ASDF scaffolding is needed to verify a standalone file. Bootstrap"
+            "diagnostics are in `.eval-cache/lisp-startup.log`; candidate errors"
+            "remain in stderr.")))
+
+(-> check-sample-runtime ()
+    t)
+(defun check-sample-runtime ()
+  "Exercise the copied sample entry point before contacting any model."
+  (let ((workspace (temporary-directory "qlot-preflight")))
+    (unwind-protect
+         (run-command
+          (list "qlot" "exec" "sbcl" "--non-interactive" "--eval"
+                "(let ((searcher (find-symbol \"PROJECT-SYSTEM-SEARCHER\" \"QLOT/LOCAL-INIT/SETUP\"))) (assert (not (member searcher asdf:*system-definition-search-functions*))))"
+                "--eval" "(asdf:load-system \"serapeum\")"
+                "--eval" "(assert (macro-function (find-symbol \"->\" \"SERAPEUM\")))")
+          :directory workspace :timeout 60)
+      (remove-directory workspace))))
 
 (-> preflight (t &key (:check-tools t))
     hash-table)
@@ -36,7 +69,7 @@
                          "chromiumRevision" (or (uiop:getenv "SKILL_EVAL_CHROMIUM_REVISION") "1248")
                          "trivial-glob" "0c2675d9452ed164970f2fc4a0e41784ebee819a"
                          "sblint" "1037296f604c3210ce073a53539d4ae95b0c2f8c"
-                         "fixtureProtocol" 1)))
+                         "fixtureProtocol" 2)))
     (unless (member profile '("lisp" "cache" "repl" "lint" "docs" "deploy" "playwright" "all") :test #'equal)
       (error "Unknown eval environment: ~A" profile))
     (when check-tools
@@ -46,14 +79,15 @@
       ;; Quickload here is the provisioning boundary. No package installation is
       ;; needed while a model is running in a sample workspace.
       (run-command
-       (list "sbcl" "--noinform" "--non-interactive" "--eval"
+       (list "qlot" "exec" "sbcl" "--noinform" "--non-interactive" "--eval"
              (format nil "(ql:quickload '~S :silent t)"
-                     (append '("rove" "event-emitter" "global-vars" "defmain" "log4cl" "yason")
+                     (append '("serapeum" "rove" "event-emitter" "global-vars" "defmain" "log4cl" "yason")
                              (when (member profile '("lint" "all") :test #'equal)
                                '("mallet" "40ants-linter"))
                              (when (member profile '("docs" "all") :test #'equal)
                                '("40ants-doc" "40ants-doc-full" "docs-builder")))))
        :timeout 300)
+      (check-sample-runtime)
       (when (member profile '("playwright" "all") :test #'equal)
         ;; Launch Chromium as well as importing Python; this detects unusable apps.
         (run-command
@@ -127,6 +161,13 @@
               (gethash "cacheForeignPaths" descriptor) (coerce (cache-relative-paths "foreign" scenario-name) 'vector))))
     (write-json (at workspace ".eval-environment.json")
                 (dict "profile" profile "scenario" scenario
+                      "commandPrefix" (vector "qlot" "exec")
+                      "lispSystems" (vector "serapeum" "rove" "event-emitter"
+                                            "global-vars" "defmain" "log4cl" "yason")
+                      "systemSearch" "workspace-and-pinned-qlot"
+                      "verificationMode" (if (uiop:directory-files workspace "*.asd")
+                                               "asdf-system" "source-file")
+                      "startupLog" ".eval-cache/lisp-startup.log"
                       "service" "demo" "projectPath" "."
                       "browserAvailable" (bool (not (equal scenario-name "missing-browser")))
                       "browserPath" (if (equal scenario-name "missing-browser")

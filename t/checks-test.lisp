@@ -130,8 +130,11 @@
                   (list "env" (format nil "PREFLIGHT_MODEL_MARKER=~A" marker)
                         (format nil "SKILL_EVAL_TOOL_PATH=~A:~A" (at scratch "bin/")
                                 (uiop:getenv "SKILL_EVAL_TOOL_PATH"))
-                        "ros" "-Q" "--" (namestring (at scratch "roswell/ai-evals.ros")) "run")
-                  :allow-failure t)
+                        "qlot" "exec" "ros" "-Q" "--"
+                        (namestring (at scratch "roswell/ai-evals.ros")) "run")
+                  ;; Runtime isolation follows cwd: launch the cloned project
+                  ;; from its own workspace, using the supported Qlot entry point.
+                  :directory scratch :allow-failure t)
                (declare (ignore stdout))
                (ok (= 2 status))
                (ok (search "Unknown check: preflight/missing" stderr))

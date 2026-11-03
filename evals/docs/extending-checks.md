@@ -171,11 +171,18 @@ in the current sample only, including NIL values:
 ```
 
 Return `(outcome "failure-name" predicate)` or supply a string failure explanation
-with `:reason`. The predicate uses Lisp truth values. A vector emits multiple
-results; NIL emits none. A failed result contributes zero to the score; a passed
-result contributes one. Skipped checks do not enter the denominator. The overall
-score is the fraction of passed results, and overall pass requires every result
-to pass. Empty output from all handlers is an error. Handler exceptions are
+with `:reason`. The predicate uses Lisp truth values. Add `:score` to award
+partial credit, for example `(outcome "layout" t :score 0.5 :reason "Inline return type")`.
+Scores must be real numbers between 0 and 1. Without `:score`, a failed result
+contributes zero and a passed result contributes one. Bare historical result
+objects without a score receive the same defaults. Partial-credit reasons are
+retained and exposed in the overall explanation.
+
+A vector emits multiple results; NIL emits none. Skipped checks do not enter
+the denominator. The overall score is the mean of check scores; overall pass
+still requires every result to pass, so other high scores cannot hide a failed
+mandatory check. A passing partial result lowers the score without failing the
+case. Empty output from all handlers is an error. Handler exceptions are
 infrastructure errors, distinct from ordinary failed checks.
 
 Named profiles use `(register-profile "project/profile" descriptors-vector)`.
