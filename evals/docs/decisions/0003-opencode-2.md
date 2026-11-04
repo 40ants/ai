@@ -70,3 +70,12 @@ interruption; command output alone does not carry those session details.
 - Documentation and offline validation do not run model evaluations. Full
   two-agent or ablation matrices remain explicit opt-in commands because each
   sample makes a model call.
+
+## Update 2026-11-04: default execution time
+
+The original 210-second OpenCode execution limit interrupted long model response
+steps even though tools completed in milliseconds. The default overall deadline
+is now 660000 ms for runs including OpenCode, leaving 630000 ms for the agent.
+Codex-only runs retain 240000 ms. Explicit `--timeout` continues to override the
+default. All effective limits remain recorded in manifests and agent profiles;
+historical run settings are unchanged.

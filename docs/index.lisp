@@ -363,10 +363,11 @@ opt-in below. Exit code zero requires every expected sample to be present and
 passing, with no infrastructure errors. Inspect artifacts after a failure
 before changing the skill or its test.
 
-Runs default to one repeat and `--timeout 240000` ms for the overall Promptfoo
-evaluation deadline. For OpenCode, a portion of that deadline is reserved for
-interrupting the session, exporting its trace and grading: the inner execution
-timeout is `timeout - min(30000, floor(timeout / 4))`, or 210000 ms by default.
+Runs default to one repeat. The overall Promptfoo deadline defaults to
+240000 ms for Codex and 660000 ms when OpenCode is selected. OpenCode reserves
+part of that deadline for interruption, trace export and grading: its execution
+timeout is `timeout - min(30000, floor(timeout / 4))`, or 630000 ms by default.
+This allows longer model responses; it does not turn failed checks into passes.
 The manifest records the overall timeout; the selected profile records its
 execution timeout. Codex and OpenCode workflows can have different effective
 turn limits, so use within-profile runs to measure skill regressions. Use

@@ -2,6 +2,15 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E3-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.3 (2026-11-04)
+
+* Increased the default OpenCode execution deadline to 630 seconds.
+* Kept file resource inventories atomic in Promptfoo to prevent duplicate samples.
+* Observed recovered Lisp runtime deadlines without depending on candidate handlers.
+* Clarified project-only cache cleanup and preserved spaces in helper paths.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E2-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.2 (2026-11-04)

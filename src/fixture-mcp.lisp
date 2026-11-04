@@ -15,6 +15,7 @@
 (defvar *events* nil)
 (defvar *repl-value* nil)
 (defvar *deadline-expired* nil)
+(defvar *observing-deadline* nil)
 (defvar *original-package* nil)
 (defvar *browser-smoke-timeout* 60 "Fixed browser runner deadline; bound shorter only by offline tests.")
 
@@ -76,6 +77,17 @@
     (write-json (at *workspace* ".eval-evidence/repl.json") snapshot)
     snapshot))
 
+(-> observe-deadline-signals ()
+    t)
+(defun observe-deadline-signals ()
+  "Record real SBCL deadline signals even when candidate handlers recover."
+  (unless (sb-int:encapsulated-p 'sb-sys:signal-deadline 'eval-deadline-observer)
+    (sb-int:encapsulate
+     'sb-sys:signal-deadline 'eval-deadline-observer
+     (lambda (original &rest arguments)
+       (when *observing-deadline* (setf *deadline-expired* t))
+       (apply original arguments)))))
+
 (-> initialize-fixture (&optional t)
     hash-table)
 (defun initialize-fixture (&optional (workspace (uiop:getcwd)))
@@ -93,6 +105,7 @@
   (pushnew *workspace* asdf:*central-registry* :test #'equal)
   (cond
     ((equal (field *fixture* "profile") "repl")
+     (observe-deadline-signals)
      (unless (find-package "DEMO/STATE")
        (make-package "DEMO/STATE" :use '("CL")))
      (let ((*package* (find-package "DEMO/STATE")))
@@ -163,7 +176,7 @@
     (handler-case
         (let ((*standard-output* stdout) (*error-output* stdout)
               (*trace-output* stdout) (*package* (find-package "CL-USER"))
-              (*read-eval* nil))
+              (*read-eval* nil) (*observing-deadline* t))
           ;; SB-SYS deadline propagates through blocking I/O; WITH-TIMEOUT also
           ;; interrupts CPU loops which never enter an SBCL deadline safe point.
           (sb-ext:with-timeout seconds

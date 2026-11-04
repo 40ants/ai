@@ -32,11 +32,11 @@ The request contains the rendered prompt, evaluation vars, and provider config:
   },
   "config": {
     "agent": "opencode",
-    "timeout": 210000,
-    "overallTimeoutMs": 240000,
+    "timeout": 630000,
+    "overallTimeoutMs": 660000,
     "runDir": "/project/.evals/runs/RUN_ID/",
     "variant": "with-skill",
-    "profile": {"model": "zai-coding-plan/glm-5.3", "mode": "build", "executionTimeoutMs": 210000},
+    "profile": {"model": "zai-coding-plan/glm-5.3", "mode": "build", "executionTimeoutMs": 630000},
     "server": {
       "baseUrl": "http://127.0.0.1:PORT",
       "stateDir": "/private/tmp/opencode-eval/"
@@ -76,11 +76,11 @@ The transport preserves inherited pinned Nix and Qlot environment variables
 but sends no process environment or authentication file contents in JSON. It
 has an 8 MiB stdout limit, retains only the last 8 KiB of stderr for diagnostics,
 and uses the overall evaluation deadline rather than the inner OpenCode
-execution timeout. The run timeout defaults to 240000 ms and is passed as `overallTimeoutMs` to
+execution timeout. The OpenCode run timeout defaults to 660000 ms and is passed as `overallTimeoutMs` to
 the provider. The OpenCode profile reserves
 `min(30000, floor(timeoutMs / 4))` for interruption, transcript export,
 collection and grading; its recorded `executionTimeoutMs` is the remainder
-(210000 ms at the default). The manifest records the overall `timeoutMs`. These
+(630000 ms at the default). The manifest records the overall `timeoutMs`. These
 values describe separate deadlines, not identical model thinking time across
 providers. Promptfoo's `abortSignal` terminates the
 child process group, allows a one-second grace period, then sends `SIGKILL` if

@@ -19,25 +19,28 @@ PROJECT_DIR="$(cd "$PROJECT_DIR" 2>/dev/null && pwd)" || {
     exit 1
 }
 
-CACHE_BASE="$HOME/.cache/common-lisp"
-MATCH_PATTERN="$CACHE_BASE/sbcl-*/$PROJECT_DIR"
+if [ "$PROJECT_DIR" = / ]; then
+    echo "ERROR: A project directory must not be the filesystem root" >&2
+    exit 1
+fi
 
-# Check if anything matches
-MATCHES=$(ls -d $MATCH_PATTERN 2>/dev/null || true)
-if [ -z "$MATCHES" ]; then
+CACHE_BASE="$HOME/.cache/common-lisp"
+# Arrays preserve spaces and expand the implementation glob without splitting
+# project names. A literal unmatched glob is omitted.
+shopt -s nullglob
+MATCHES=("$CACHE_BASE"/sbcl-*/"${PROJECT_DIR#/}")
+if [ "${#MATCHES[@]}" -eq 0 ]; then
     echo "No fasl cache found for: $PROJECT_DIR"
-    echo "Searched: $MATCH_PATTERN"
     exit 0
 fi
 
-echo "Removing fasl caches for: $PROJECT_DIR"
-echo "$MATCHES"
-echo ""
-
-for dir in $MATCHES; do
-    rm -rf "$dir"
-    echo "  Removed: $dir"
+for dir in "${MATCHES[@]}"; do
+    if [ -L "$dir" ]; then
+        echo "ERROR: Refusing symbolic-link cache target: $dir" >&2
+        exit 1
+    fi
+    rm -rf -- "$dir"
+    echo "Removed: $dir"
 done
 
-echo ""
 echo "Done. Rebuild with your tool to recompile from source."

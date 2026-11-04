@@ -17,7 +17,7 @@
   (:import-from #:40ants-ai-evals/suites #:catalog #:suite-path)
   (:import-from #:40ants-ai-evals/util #:field #:at #:root #:write-text #:read-json
                 #:temporary-directory #:remove-directory #:copy-directory #:digest-file
-                #:sequence-list #:true-p #:run-command))
+                #:sequence-list #:true-p #:run-command #:write-json))
 (in-package #:40ants-ai-evals-tests/case-resources-test)
 
 (defmacro with-input-tree ((directory vars) &body body)
@@ -261,3 +261,43 @@
           (delete-file (at workspace "unexpected.bin"))
           (delete-file (at workspace "image.png"))
           (ok (not (passes)))))))
+
+(deftest multiple-resource-files-do-not-multiply-promptfoo-samples
+  (with-input-tree (directory vars)
+    (let* ((first "cases/example/first.lisp")
+           (second "cases/example/second.lisp")
+           (config (at directory "promptfooconfig.json"))
+           (export (at directory "results.json")))
+      (write-text (input-path directory first) "(assert t)")
+      (write-text (input-path directory second) "(assert t)")
+      (write-text (input-path directory "cases/example/fixtures/input.txt") "fixture")
+      (runtime-vars vars first)
+      (setf (gethash "checks" vars)
+            (concatenate 'vector (field vars "checks")
+                         (vector (dict "check" "skill/lisp-runtime"
+                                       "params" (dict "loadFiles" #() "assertionsFile" second)))))
+      (validate-plan vars)
+      (ok (hash-table-p (field vars "fileResources")))
+      (ok (= 2 (hash-table-count (field vars "fileResources"))))
+      (let ((fingerprint (input-fingerprint (list (dict "vars" vars))))
+            (resources (field vars "fileResources")))
+        (setf (gethash "fileResources" vars) (vector first second))
+        (ok (equal fingerprint (input-fingerprint (list (dict "vars" vars)))))
+        (setf (gethash "fileResources" vars) resources))
+      (write-json config
+       (dict "providers" #("echo") "prompts" #("resource transport")
+             "tests" (vector (dict "vars" vars))))
+      (multiple-value-bind (out err status)
+          (run-command
+           (list "qlot" "exec" "env" (format nil "PROMPTFOO_CONFIG_DIR=~A" (at directory "state/"))
+                 "promptfoo" "eval" "-c" (namestring config) "-o" (namestring export)
+                 "--repeat" "3" "--no-cache" "--no-share" "--no-table")
+           :directory directory :timeout 60 :allow-failure t)
+        (declare (ignore out))
+        (ok (zerop status) err)
+        (when (probe-file export)
+          (let* ((body (field (read-json export) "results"))
+                 (rows (if (hash-table-p body) (field body "results") body)))
+            (ok (= 3 (length rows)))
+            (loop for row across rows do
+              (ok (= 2 (hash-table-count (field row "testCase" "vars" "fileResources")))))))))))

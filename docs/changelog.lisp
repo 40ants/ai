@@ -4,6 +4,11 @@
 (in-package #:40ants-ai-evals-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum"))
+  (0.4.3 2026-11-04
+         "* Increased the default OpenCode execution deadline to 630 seconds.
+* Kept file resource inventories atomic in Promptfoo to prevent duplicate samples.
+* Observed recovered Lisp runtime deadlines without depending on candidate handlers.
+* Clarified project-only cache cleanup and preserved spaces in helper paths.")
   (0.4.2 2026-11-04
          "* Added fractional check scores while preserving mandatory pass decisions.
 * Awarded half credit for inline Serapeum return types and full credit for

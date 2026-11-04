@@ -1,7 +1,7 @@
 ;;;; Extension API: named checks, profiles, typed parameters and shared evidence.
 (uiop:define-package #:40ants-ai-evals/checks
   (:use #:cl)
-  (:import-from #:40ants-ai-evals/case-resources #:resolve-resource)
+  (:import-from #:40ants-ai-evals/case-resources #:resolve-resource #:file-references)
   (:import-from #:asdf)
   (:import-from #:yason)
   (:import-from #:serapeum #:-> #:dict)
@@ -143,9 +143,10 @@
                             (or (field vars "id") "<unknown>") key id type value))
                    (when (equal type "file")
                      (resolve-resource vars value)
-                     (let ((references (sequence-list (field vars "fileResources"))))
-                       (setf (gethash "fileResources" vars)
-                             (coerce (adjoin value references :test #'equal) 'vector)))))) params)
+                     (let ((references (dict)))
+                       (dolist (reference (adjoin value (file-references vars) :test #'equal))
+                         (setf (gethash reference references) 'yason:true))
+                       (setf (gethash "fileResources" vars) references))))) params)
       (maphash (lambda (key type)
                  (declare (ignore type))
                  (unless (or (member key (field definition "optionalParameters") :test #'equal)

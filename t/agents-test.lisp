@@ -105,3 +105,11 @@
            (dolist (body '("printf 'not-json'" "printf '{}'" "exit 3"))
              (ok (stringp (field (invoke-provider-transport scratch body 1000) "transportError")))))
       (remove-directory scratch))))
+
+(deftest agent-specific-timeouts
+  (ok (= 240000 (40ants-ai-evals/runner::evaluation-timeout (dict))))
+  (ok (= 660000 (40ants-ai-evals/runner::evaluation-timeout (dict "agent" "opencode"))))
+  (ok (= 660000 (40ants-ai-evals/runner::evaluation-timeout (dict "agent" "all"))))
+  (ok (= 630000 (40ants-ai-evals/runner::opencode-execution-timeout (dict "agent" "opencode"))))
+  (ok (= 210000 (40ants-ai-evals/runner::opencode-execution-timeout
+                 (dict "agent" "opencode" "timeout" "240000")))))

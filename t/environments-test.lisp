@@ -285,3 +285,48 @@ wait
                      (result (decode (field (aref (field response "result" "content") 0) "text"))))
                 (ok (equal "42" (aref (field result "values") 0)))
                 (ok (= 42 (field result "state" "counter")))))))))))
+
+(deftest recovered-inner-deadline-is-observed
+  (with-fixture (workspace "repl" "deadline")
+    (initialize-fixture workspace)
+    (multiple-value-bind (result failed)
+        (evaluate-form
+         (dict "form" "(handler-case (sb-sys:with-deadline (:seconds 0.01) (sleep 2)) (sb-sys:deadline-timeout () :recovered))"
+               "deadline_seconds" 1))
+      (ok (not failed))
+      (ok (equal ":RECOVERED" (aref (field result "values") 0)))
+      (ok (true-p (field result "deadlineExpired"))))
+    (evaluate-form (dict "form" "(demo/state:read-counter)"))
+    (let ((state (read-json (at workspace ".eval-evidence/repl.json"))))
+      (ok (= 41 (field state "counter")))
+      (ok (true-p (field state "deadlineExpired")))))
+  (with-fixture (workspace "repl" "deadline")
+    (initialize-fixture workspace)
+    (evaluate-form (dict "form" "(handler-case (signal 'sb-sys:deadline-timeout) (sb-sys:deadline-timeout () :synthetic))"))
+    (ok (not (true-p (field (read-json (at workspace ".eval-evidence/repl.json")) "deadlineExpired"))))))
+
+(deftest cache-helper-preserves-spaces-and-neighbor-projects
+  (let* ((workspace (temporary-directory "cache-helper"))
+         (home (at workspace "home/"))
+         (project (at workspace "project with spaces/"))
+         (helper (at (root) "plugins/common-lisp-skills/skills/clearing-asdf-fasl-cache/clear-fasl-cache.sh"))
+         (targets nil) (foreign (at home ".cache/common-lisp/sbcl-a/other/counter.fasl")))
+    (unwind-protect
+         (progn
+           (ensure-directories-exist project)
+           (write-text foreign "neighbor")
+           (dolist (implementation '("sbcl-a/" "sbcl-b/"))
+             (let ((target (at (at (at home ".cache/common-lisp/") implementation)
+                               (subseq (namestring project) 1))))
+               (write-text (at target "counter.fasl") "stale")
+               (push target targets)))
+           (loop repeat 2 do
+             (multiple-value-bind (out err status)
+                 (run-command (list "qlot" "exec" "env" (format nil "HOME=~A" home)
+                                    "bash" (namestring helper) (namestring project))
+                              :directory workspace :allow-failure t)
+               (declare (ignore out))
+               (ok (zerop status) err))
+             (ok (every (lambda (target) (not (probe-file target))) targets)))
+           (ok (equal "neighbor" (uiop:read-file-string foreign))))
+      (remove-directory workspace))))

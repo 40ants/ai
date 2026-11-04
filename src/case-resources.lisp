@@ -13,7 +13,7 @@
   (:export #:*inputs-root* #:*sample-directory* #:resolve-resource #:fixture-manifest
            #:baseline-manifest #:sample-manifest #:copy-fixtures #:file-metadata
            #:metadata-equal-p #:manifest-equal-p #:product-path-p #:restore-sample
-           #:input-fingerprint #:validate-fixtures))
+           #:input-fingerprint #:validate-fixtures #:file-references))
 (in-package #:40ants-ai-evals/case-resources)
 
 (defvar *inputs-root* nil "Input tree for this operation; NIL uses the loaded harness.")
@@ -235,6 +235,15 @@
        artifacts)))
   destination)
 
+(-> file-references (hash-table)
+    list)
+(defun file-references (vars)
+  "Read a resource set or a historical array without expanding Promptfoo cases."
+  (let ((references (field vars "fileResources")))
+    (if (hash-table-p references)
+        (loop for path being the hash-keys of references collect path)
+        (sequence-list references))))
+
 (-> input-fingerprint (list &key (:fixtures-only boolean))
     string)
 (defun input-fingerprint (cases &key fixtures-only)
@@ -250,6 +259,6 @@
           (feed (list (field vars "id") (field vars "scenario")))
           (feed-table (fixture-manifest vars))
           (unless fixtures-only
-            (dolist (reference (sort (copy-list (sequence-list (field vars "fileResources"))) #'string<))
+            (dolist (reference (sort (file-references vars) #'string<))
               (feed (list reference (file-metadata (resolve-resource vars reference)))))))))
     (ironclad:byte-array-to-hex-string (ironclad:produce-digest digest))))

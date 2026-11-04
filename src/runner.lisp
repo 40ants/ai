@@ -48,6 +48,15 @@
       (error "--~A must be ~D..~D" key minimum maximum))
     value))
 
+(-> evaluation-timeout (hash-table)
+    integer)
+(defun evaluation-timeout (flags)
+  "Reserve sufficient model time for OpenCode while keeping Codex defaults."
+  (integer-option flags "timeout"
+                  (if (member "opencode" (selected-agents flags) :test #'equal)
+                      660000 240000)
+                  1 3600000))
+
 (-> validate-options (hash-table)
     t)
 (defun validate-options (flags)
@@ -68,7 +77,7 @@
       (40ants-ai-evals/providers/opencode:model-reference
        (field (profile-for "opencode" flags) "model"))))
   (integer-option flags "repeat" 1 1 20)
-  (integer-option flags "timeout" 240000 1 3600000)
+  (evaluation-timeout flags)
   (unless (member (option flags "group" "development")
                    '("development" "holdout" "all") :test #'equal)
     (error "Invalid group: ~A" (gethash "group" flags)))
@@ -321,7 +330,7 @@
 (-> opencode-execution-timeout (hash-table)
     integer)
 (defun opencode-execution-timeout (flags)
-  (let ((deadline (integer-option flags "timeout" 240000 1 3600000)))
+  (let ((deadline (evaluation-timeout flags)))
     (- deadline (min 30000 (floor deadline 4)))))
 
 (-> effective-config (t list hash-table pathname hash-table t)
@@ -347,7 +356,7 @@
                                          "agent" agent "variant" variant
                                          "profile" (field profiles agent)
                                          "timeout" (opencode-execution-timeout flags)
-                                         "overallTimeoutMs" (integer-option flags "timeout" 240000 1 3600000))))
+                                         "overallTimeoutMs" (evaluation-timeout flags))))
                 providers))))
     (setf (gethash "prompts" config) (coerce (nreverse prompts) 'vector)
           (gethash "providers" config) (coerce (nreverse providers) 'vector)
@@ -363,7 +372,7 @@
     (dolist (agent agents)
       (let ((profile (profile-for agent flags tools)))
         (setf (gethash "evaluationTimeoutMs" profile)
-              (integer-option flags "timeout" 240000 1 3600000))
+              (evaluation-timeout flags))
         (when (equal agent "opencode")
           (setf (gethash "executionTimeoutMs" profile) (opencode-execution-timeout flags)))
         (setf (gethash agent profiles) profile)))
@@ -388,7 +397,7 @@
           "variants" (coerce variants 'vector) "tools" tools
           "platform" (format nil "~A-~A" (string-downcase (software-type))
                               (string-downcase (machine-type)))
-          "timeoutMs" (integer-option flags "timeout" 240000 1 3600000)
+          "timeoutMs" (evaluation-timeout flags)
           "toolPath" (uiop:getenv "SKILL_EVAL_TOOL_PATH")
           "note" "Compare agent/model systems; pinned clients do not pin server-side model weights.")))
 
