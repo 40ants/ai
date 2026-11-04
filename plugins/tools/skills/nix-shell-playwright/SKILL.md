@@ -12,7 +12,7 @@ Use this skill to make Python Playwright reproducible in a project with `nix-she
 1. Decide whether the target is static or server-backed.
 2. Inspect the project environment first. Keep an existing `shell.nix` and its
    pinned versions. Use `scripts/bootstrap_python_playwright_nix.sh <project-dir>
-   [browser-path]` only when its output files are absent: the helper overwrites
+   [browser-path]` only when its output files are absent: the helper refuses to overwrite
    them. If `PLAYWRIGHT_BROWSER_PATH` is supplied, pass that exact path as the
    second argument rather than replacing it with a machine-specific default.
 3. For static pages, run `scripts/generate_static_smoke_test.py --output <project-dir>/smoke_test.py --paths index.html ...`.

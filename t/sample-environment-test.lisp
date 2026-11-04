@@ -9,7 +9,7 @@
   (:import-from #:40ants-ai-evals/grading/contracts #:grade)
   (:import-from #:40ants-ai-evals/util
                 #:at #:root #:field #:write-text #:run-command #:temporary-directory
-                #:remove-directory #:true-p))
+                #:remove-directory #:true-p #:digest-file))
 (in-package #:40ants-ai-evals-tests/sample-environment-test)
 
 (deftest lint-baseline-respects-ignored-vendor
@@ -112,3 +112,45 @@
                             :directory workspace :allow-failure t)
              (declare (ignore out err)) (ok (= 2 status))))
       (remove-directory workspace))))
+
+
+(deftest browser-bootstrap-uses-pinned-python-and-preserves-existing-files
+  (dolist (scenario '("smoke" "missing-browser"))
+    (let* ((workspace (temporary-directory "browser-bootstrap"))
+           (skill (at (root) "plugins/tools/skills/nix-shell-playwright/")))
+      (unwind-protect
+           (progn
+             (prepare workspace (dict "environmentProfile" "playwright"
+                                      "scenario" (dict "name" scenario)))
+             (write-text (at workspace "index.html") "<!doctype html><title>Fixture</title><h1>Browser fixture</h1>")
+             (run-command (list "qlot" "exec" "bash"
+                                (namestring (at skill "scripts/bootstrap_python_playwright_nix.sh")) ".")
+                          :directory workspace)
+             (let ((before (digest-file (at workspace "shell.nix"))))
+               (multiple-value-bind (out err status)
+                   (run-command (list "qlot" "exec" "bash"
+                                      (namestring (at skill "scripts/bootstrap_python_playwright_nix.sh")) ".")
+                                :directory workspace :allow-failure t)
+                 (declare (ignore out))
+                 (ok (= 2 status))
+                 (ok (search "Refusing to overwrite" err)))
+               (ok (equal before (digest-file (at workspace "shell.nix")))))
+             (run-command (list "qlot" "exec" "python3"
+                                (namestring (at skill "scripts/generate_static_smoke_test.py"))
+                                "--output" "smoke_test.py" "--paths" "index.html")
+                          :directory workspace)
+             (multiple-value-bind (out err status)
+                 (run-command (list (uiop:getenv "SKILL_EVAL_SHELL") "-lc" "./run_smoke_test.sh")
+                              :directory workspace :timeout 120 :allow-failure t)
+               (let ((output (concatenate 'string out err)))
+                 (ok (not (search "unsupportedPython" output)))
+                 (if (equal scenario "missing-browser")
+                     (progn
+                       (ok (not (zerop status)))
+                       (ok (search "doesn't exist" output) output)
+                       (ok (not (probe-file (at workspace "test-shots/index.png")))))
+                     (progn
+                       (ok (zerop status) output)
+                       (ok (probe-file (at workspace "test-shots/index.png")))
+                       (ok (probe-file (at workspace "test-shots/index-mobile.png"))))))))
+        (remove-directory workspace)))))

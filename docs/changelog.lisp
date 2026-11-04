@@ -4,6 +4,12 @@
 (in-package #:40ants-ai-evals-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum" "JSON"))
+  (0.4.10 2026-11-04
+         "* Aligned the browser bootstrap helper with the pinned Python 3.13 runtime,
+so browser diagnostics reach Playwright instead of failing on unsupported packages.
+* Preserved existing Nix and runner files and inherited an explicitly supplied browser.
+* Kept complete strict-build output and exposed root changelog sections.
+* Used available image inspection tools without substituting custom pixel heuristics.")
   (0.4.9 2026-11-04
          "* Prepared real unavailable-tool and unavailable-browser scenarios through
 literal per-workspace environment overrides, including nested Qlot commands.
