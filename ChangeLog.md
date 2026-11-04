@@ -2,6 +2,16 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E10-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.10 (2026-11-04)
+
+* Aligned the browser bootstrap helper with the pinned Python 3.13 runtime,
+so browser diagnostics reach Playwright instead of failing on unsupported packages.
+* Preserved existing Nix and runner files and inherited an explicitly supplied browser.
+* Kept complete strict-build output and exposed root changelog sections.
+* Used available image inspection tools without substituting custom pixel heuristics.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E9-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.9 (2026-11-04)
