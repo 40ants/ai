@@ -153,7 +153,7 @@
     boolean)
 (defun product-path-p (path)
   "Exclude evaluation machinery from product file comparisons."
-  (not (or (member path '(".eval-fixture.json" ".eval-environment.json"
+  (not (or (member path '(".eval-fixture.json" ".eval-environment.json" ".eval-shell-env"
                           ".eval-cache-before.json" "opencode.json"
                           ".eval-evidence" ".eval-cache") :test #'equal)
            (uiop:string-prefix-p ".eval-evidence/" path)

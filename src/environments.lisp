@@ -71,7 +71,7 @@
                          "chromiumRevision" (or (uiop:getenv "SKILL_EVAL_CHROMIUM_REVISION") "1248")
                          "trivial-glob" "0c2675d9452ed164970f2fc4a0e41784ebee819a"
                          "sblint" "1037296f604c3210ce073a53539d4ae95b0c2f8c"
-                         "fixtureProtocol" 4)))
+                         "fixtureProtocol" 5)))
     (unless (member profile '("lisp" "cache" "repl" "lint" "docs" "deploy" "playwright" "all") :test #'equal)
       (error "Unknown eval environment: ~A" profile))
     (when check-tools
@@ -140,15 +140,18 @@
       (tree-files path)))
   t)
 
-(-> ensure-git-baseline (t &optional list)
+(-> ensure-git-baseline (t &optional list boolean)
     string)
-(defun ensure-git-baseline (workspace &optional files)
-  "Provide a local reproducible revision for strict documentation source links."
-  (labels ((head ()
+(defun ensure-git-baseline (workspace &optional files respect-ignore-p)
+  "Create a reproducible local revision, optionally respecting fixture ignore rules."
+  (labels ((git (args &optional allow-failure)
+             (run-command (append '("env" "GIT_CONFIG_GLOBAL=/dev/null"
+                                          "GIT_CONFIG_NOSYSTEM=1" "git") args)
+                          :directory workspace :allow-failure allow-failure))
+           (head ()
              (when (probe-file (at workspace ".git/HEAD"))
                (multiple-value-bind (out err status)
-                   (run-command '("git" "rev-parse" "--verify" "HEAD")
-                                :directory workspace :allow-failure t)
+                   (git '("rev-parse" "--verify" "HEAD") t)
                  (declare (ignore err))
                  (when (zerop status)
                    (string-trim '(#\Space #\Newline #\Return) out))))))
@@ -157,12 +160,23 @@
                          (tree-files workspace
                           :exclude '(".git" ".agents" ".opencode" ".keep"
                                      ".eval-cache" ".eval-evidence" ".eval-fixture.json"
-                                     ".eval-environment.json" "opencode.json")))))
-          (run-command '("git" "init" "--quiet") :directory workspace)
+                                     ".eval-environment.json" ".eval-shell-env" "opencode.json")))))
+          (git '("init" "--quiet"))
+          (when respect-ignore-p
+            (setf files
+                  (remove-if
+                   (lambda (file)
+                     (multiple-value-bind (out err status)
+                         (git (list "check-ignore" "--quiet" "--" file) t)
+                       (declare (ignore out))
+                       (unless (member status '(0 1))
+                         (error "Cannot inspect fixture ignore rules: ~A" err))
+                       (zerop status))) files)))
           (when files
-            (run-command (append '("git" "add" "--force" "--") (sort (copy-list files) #'string<))
-                         :directory workspace))
-          (run-command '("env" "GIT_AUTHOR_DATE=2000-01-01T00:00:00Z"
+            (git (append '("add") (unless respect-ignore-p '("--force"))
+                         '("--") (sort (copy-list files) #'string<))))
+          (run-command '("env" "GIT_CONFIG_GLOBAL=/dev/null" "GIT_CONFIG_NOSYSTEM=1"
+                               "GIT_AUTHOR_DATE=2000-01-01T00:00:00Z"
                                "GIT_COMMITTER_DATE=2000-01-01T00:00:00Z"
                                "git" "-c" "user.name=Eval Fixture"
                                      "-c" "user.email=eval@example.invalid"
@@ -170,7 +184,39 @@
                                      "-c" "commit.gpgsign=false"
                                      "commit" "--quiet" "--allow-empty" "-m" "Prepared fixture baseline")
                        :directory workspace)
-          (or (head) (error "Documentation fixture has no Git revision after setup"))))))
+          (or (head) (error "Fixture has no Git revision after setup"))))))
+
+(-> sample-shell-environment (string t)
+    hash-table)
+(defun sample-shell-environment (profile scenario)
+  "Describe actual tool unavailability independently for each copied workspace."
+  (let ((env (dict)))
+    (when (and (equal profile "lint") (equal scenario "missing-tool"))
+      (let* ((path (or (uiop:getenv "SKILL_EVAL_TOOL_PATH") (uiop:getenv "PATH")))
+             (directories (uiop:split-string path :separator ":"))
+             (filtered (remove-if
+                        (lambda (directory)
+                          (probe-file (at (uiop:ensure-directory-pathname directory)
+                                          "40ants-linter"))) directories))
+             (value (format nil "~{~A~^:~}" filtered)))
+        (setf (gethash "PATH" env) value
+              (gethash "SKILL_EVAL_TOOL_PATH" env) value)))
+    (when (and (equal profile "playwright") (equal scenario "missing-browser"))
+      (setf (gethash "PLAYWRIGHT_BROWSER_PATH" env) ".missing-browser/chromium"
+            (gethash "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" env) ".missing-browser/chromium"))
+    env))
+
+(-> write-shell-environment (t hash-table)
+    t)
+(defun write-shell-environment (workspace environment)
+  "Serialize literal environment bindings, with no shell code or interpolation."
+  (unless (zerop (hash-table-count environment))
+    (write-text (at workspace ".eval-shell-env")
+                (with-output-to-string (out)
+                  (loop for name in (sort (loop for key being the hash-keys of environment
+                                               collect key) #'string<)
+                        do (format out "~A=~A~C" name (gethash name environment)
+                                   (code-char 0)))))))
 
 (-> prepare (t t)
     hash-table)
@@ -182,12 +228,13 @@
          (scenario-name (field scenario "name")))
     (setf (gethash "scenario" descriptor) scenario
           (gethash "fixtureScript" descriptor) (namestring (at (root) "roswell/fixture-mcp.ros")))
-    (when (equal profile "docs")
+    (when (member profile '("docs" "lint") :test #'equal)
       (setf (gethash "gitBaseline" descriptor)
             (ensure-git-baseline
              workspace
              (when (hash-table-p (field vars "fixtureManifest"))
-               (loop for path being the hash-keys of (field vars "fixtureManifest") collect path)))))
+               (loop for path being the hash-keys of (field vars "fixtureManifest") collect path))
+             (equal profile "lint"))))
     (when (equal profile "cache")
       (let ((before (dict)))
         (dolist (kind '("project" "foreign"))
@@ -199,6 +246,9 @@
         (setf (gethash "cacheBefore" descriptor) before
               (gethash "cacheProjectPaths" descriptor) (coerce (cache-relative-paths "project" scenario-name) 'vector)
               (gethash "cacheForeignPaths" descriptor) (coerce (cache-relative-paths "foreign" scenario-name) 'vector))))
+    (setf (gethash "shellEnvironment" descriptor)
+          (sample-shell-environment profile scenario-name))
+    (write-shell-environment workspace (field descriptor "shellEnvironment"))
     (write-json (at workspace ".eval-environment.json")
                 (dict "profile" profile "scenario" scenario
                       "commandPrefix" (vector "qlot" "exec")
@@ -245,6 +295,9 @@
                       "PLAYWRIGHT_BROWSER_PATH" "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
                       "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" "NIX_PATH" "SKILL_EVAL_NIXPKGS_PATH"))
         (when (uiop:getenv name) (setf (gethash name env) (uiop:getenv name)))))
+    (when (hash-table-p (field descriptor "shellEnvironment"))
+      (maphash (lambda (name value) (setf (gethash name env) value))
+               (field descriptor "shellEnvironment")))
     (when workspace
       (setf (gethash "SKILL_EVAL_WORKSPACE" env) (namestring (uiop:ensure-directory-pathname workspace))))
     env))

@@ -33,6 +33,12 @@
                  (push (outcome (format nil "preserved:~A" file)
                                 (metadata-equal-p metadata (field files file))) results)))
              (baseline-manifest (context-vars context) (field params "fixtures")))
+    (when (hash-table-p (field (context-vars context) "environmentManifest"))
+      (maphash (lambda (path metadata)
+                 (push (outcome (format nil "preserved:~A" path)
+                                (metadata-equal-p metadata
+                                  (field (context-sample context) "artifacts" path))) results))
+               (field (context-vars context) "environmentManifest")))
     (coerce (nreverse results) 'vector)))
 
 (-> no-changes (hash-table hash-table)

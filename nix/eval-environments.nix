@@ -16,6 +16,7 @@ let
       : "''${SKILL_EVAL_TOOL_PATH:?Missing pinned evaluation tool path}"
       unset BASH_ENV ENV
       export PATH="$SKILL_EVAL_TOOL_PATH"
+      . ${./sample-environment.sh}
       export SHELL="''${SKILL_EVAL_SHELL:-$0}"
       case "''${1:-}" in
         -l|--login) shift ;;

@@ -4,6 +4,12 @@
 (in-package #:40ants-ai-evals-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum" "JSON"))
+  (0.4.9 2026-11-04
+         "* Prepared real unavailable-tool and unavailable-browser scenarios through
+literal per-workspace environment overrides, including nested Qlot commands.
+* Created reproducible tracked-source baselines for lint fixtures while respecting
+ignored vendor files, and preserved environment metadata during grading.
+* Clarified automatic selection of Rove testing and live Lisp evaluation skills.")
   (0.4.8 2026-11-04
          "* Preserved source pathnames beneath isolated compilation caches so Rove
 discovers package-inferred test suites instead of reporting zero tests.

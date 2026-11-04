@@ -57,6 +57,7 @@ let
     '';
   })) ]);
   qlot = pkgs.writeShellScriptBin "qlot" ''
+    . ${./nix/sample-environment.sh}
     # Native providers copy fixtures without a dependency tree. Reuse only the
     # declared project distribution while preserving the candidate's cwd.
     if [ "''${1:-}" = exec ] && [ ! -f .qlot/setup.lisp ] && [ -n "''${SKILL_EVAL_DEPENDENCY_ROOT:-}" ]; then
@@ -94,6 +95,7 @@ let
     if [ -n "''${SKILL_EVAL_TOOL_PATH:-}" ]; then
       export PATH="$SKILL_EVAL_TOOL_PATH"
     fi
+    . ${./nix/sample-environment.sh}
     case "''${1:-}" in
       --version|--help) exec ${pkgs.roswell}/bin/ros "$@" ;;
     esac
@@ -103,6 +105,7 @@ let
     if [ -n "''${SKILL_EVAL_TOOL_PATH:-}" ]; then
       export PATH="$SKILL_EVAL_TOOL_PATH"
     fi
+    . ${./nix/sample-environment.sh}
     case "''${1:-}" in
       --version|--help) exec ${pkgs.sbcl}/bin/sbcl "$@" ;;
       --noinform) shift ;;

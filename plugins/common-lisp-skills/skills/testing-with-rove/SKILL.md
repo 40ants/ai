@@ -1,6 +1,6 @@
 ---
 name: testing-with-rove
-description: Use when writing or running tests with the Rove framework in a Common Lisp project, wiring an ASDF test-op, debugging an unexpected (signals ...) test result, or running a single test from the REPL.
+description: Load before adding, changing, or running Common Lisp Rove DEFTEST tests, including one small test, a signals assertion, a single REPL test run, or ASDF test-op wiring. Explains condition assertions, test discovery, and failure exit status.
 ---
 
 # Testing with Rove
