@@ -81,13 +81,23 @@ Overview text...
 ```lisp
 (uiop:define-package #:project-docs/changelog
   (:use #:cl)
-  (:import-from #:40ants-doc/changelog #:defchangelog))
+  (:import-from #:40ants-doc/changelog #:defchangelog)
+  (:export #:@changelog))
 (in-package #:project-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "REPL"))
   (1.0.0 2026-06-14
          "* Initial public version."))
 ```
+
+Export `@changelog` from its package and import/re-export it from the loaded
+documentation entry package, as in the examples above. Keep it as a standalone
+root section: do not put `(@changelog section)` inside `@index`. The pinned
+`docs-builder` discovers exported root sections named `@CHANGELOG`, includes them
+in HTML, and uses them to generate `ChangeLog.md`. Nesting the section under
+`@index` removes it from that root discovery. If the file is missing after a
+successful build, check loading, exports, and root membership before searching
+for another build API or installing tools.
 
 ### Build in the project environment
 
@@ -109,6 +119,12 @@ Replace `project-docs` with the actual documentation system. This uses the same
 builder as the CLI and regenerates README, changelog and local HTML sections.
 Keep the initialization and build in the same process. There is no need for a
 `.qlot/bin/build-docs` file to use this API.
+
+Keep the complete build output and the real process exit status visible. Run the
+build command directly; piping it through `tail`, `grep`, or another filter can
+hide warnings, the completion message, and a failed builder exit status. If the
+project saves a full build log, inspect that log in a separate command afterward.
+Do not rerun the build inside a filtering pipeline as the final verification.
 
 If a project explicitly requires its installed CLI wrapper, run it through
 Roswell inside Qlot:

@@ -76,3 +76,33 @@
                                       (run-command '("git" "rev-parse" "--show-toplevel")
                                                    :directory child))))))))
       (remove-directory parent))))
+
+(deftest exported-root-changelog-produces-markdown-and-html
+  (let* ((workspace (temporary-directory "docs-changelog-root"))
+         (fixture (at (root) "evals/writing-40ants-doc-documentation/cases/heldout-functional-changelog/fixtures/")))
+    (unwind-protect
+         (progn
+           (copy-directory fixture workspace)
+           (prepare workspace (dict "environmentProfile" "docs"))
+           (write-text
+            (at workspace "docs/changelog.lisp")
+            (format nil "(uiop:define-package #:demo-docs/changelog~%  (:use #:cl)~%  (:import-from #:40ants-doc/changelog #:defchangelog)~%  (:export #:@changelog))~%(in-package #:demo-docs/changelog)~%(defchangelog ()~%  (0.2.0 2026-11-01~%         \"* The addition function accepts an optional third value.\"))~%"))
+           (write-text
+            (at workspace "docs/index.lisp")
+            (format nil "(uiop:define-package #:demo-docs/index~%  (:use #:cl)~%  (:import-from #:40ants-doc #:defsection #:defsection-copy)~%  (:import-from #:demo-docs/changelog #:@changelog)~%  (:export #:@index #:@readme #:@changelog))~%(in-package #:demo-docs/index)~%(defsection @index (:title \"Demo\")~%  (demo system)~%  \"A deterministic queue for background jobs.\")~%(defsection-copy @readme @index)~%"))
+           (multiple-value-bind (out err status)
+               (run-command
+                '("qlot" "exec" "sbcl" "--non-interactive"
+                  "--eval" "(asdf:load-system \"docs-builder\")"
+                  "--eval" "(docs-builder:build \"demo-docs\" :error-on-warnings t :local t)")
+                :directory workspace :timeout 120 :allow-failure t)
+             (ok (zerop status) err)
+             (ok (search "Done" out))
+             (ok (not (search "WARNING:" (concatenate 'string out err)))))
+           (ok (probe-file (at workspace "ChangeLog.md")))
+           (ok (search "optional third value"
+                       (uiop:read-file-string (at workspace "ChangeLog.md"))))
+           (ok (search "deterministic queue"
+                       (uiop:read-file-string (at workspace "README.md"))))
+           (ok (probe-file (at workspace "docs/build/index.html"))))
+      (remove-directory workspace))))
