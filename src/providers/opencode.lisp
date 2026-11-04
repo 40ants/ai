@@ -384,6 +384,15 @@ Timeouts interrupt execution before collecting the projected export and durable 
                ;; Shared server state lives until all assertions and error archives finish.
                (setf workspace (workspace-for config vars variant
                                               (unless owned (field server "stateDir"))))
+               ;; Older immutable templates may contain an empty Git repository.
+               ;; Provision source-link metadata before spending model tokens.
+               (when (equal (field vars "environmentProfile") "docs")
+                 (setf (gethash "gitBaseline" trace)
+                       (40ants-ai-evals/environments:ensure-git-baseline
+                        workspace
+                        (when (hash-table-p (field vars "fixtureManifest"))
+                          (loop for path being the hash-keys of (field vars "fixtureManifest")
+                                collect path)))))
                (when (probe-file (at workspace ".eval-fixture.json"))
                  (let* ((descriptor (read-json (at workspace ".eval-fixture.json")))
                         (config-extra (40ants-ai-evals/environments:opencode-config descriptor)))

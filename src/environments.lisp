@@ -9,7 +9,7 @@
                 #:digest-file #:run-command #:tree-files #:copy-directory #:bool
                 #:temporary-directory #:remove-directory)
   (:export #:preflight #:prepare #:codex-config #:opencode-config #:finalize
-           #:profile-name #:environment-variables #:workspace-instructions))
+           #:profile-name #:environment-variables #:workspace-instructions #:ensure-git-baseline))
 (in-package #:40ants-ai-evals/environments)
 
 (-> profile-name (t)
@@ -71,7 +71,7 @@
                          "chromiumRevision" (or (uiop:getenv "SKILL_EVAL_CHROMIUM_REVISION") "1248")
                          "trivial-glob" "0c2675d9452ed164970f2fc4a0e41784ebee819a"
                          "sblint" "1037296f604c3210ce073a53539d4ae95b0c2f8c"
-                         "fixtureProtocol" 2)))
+                         "fixtureProtocol" 3)))
     (unless (member profile '("lisp" "cache" "repl" "lint" "docs" "deploy" "playwright" "all") :test #'equal)
       (error "Unknown eval environment: ~A" profile))
     (when check-tools
@@ -140,6 +140,38 @@
       (tree-files path)))
   t)
 
+(-> ensure-git-baseline (t &optional list)
+    string)
+(defun ensure-git-baseline (workspace &optional files)
+  "Provide a local reproducible revision for strict documentation source links."
+  (labels ((head ()
+             (when (probe-file (at workspace ".git/HEAD"))
+               (multiple-value-bind (out err status)
+                   (run-command '("git" "rev-parse" "--verify" "HEAD")
+                                :directory workspace :allow-failure t)
+                 (declare (ignore err))
+                 (when (zerop status)
+                   (string-trim '(#\Space #\Newline #\Return) out))))))
+    (or (head)
+        (let ((files (or files
+                         (tree-files workspace
+                          :exclude '(".git" ".agents" ".opencode" ".keep"
+                                     ".eval-cache" ".eval-evidence" ".eval-fixture.json"
+                                     ".eval-environment.json" "opencode.json")))))
+          (run-command '("git" "init" "--quiet") :directory workspace)
+          (when files
+            (run-command (append '("git" "add" "--force" "--") (sort (copy-list files) #'string<))
+                         :directory workspace))
+          (run-command '("env" "GIT_AUTHOR_DATE=2000-01-01T00:00:00Z"
+                               "GIT_COMMITTER_DATE=2000-01-01T00:00:00Z"
+                               "git" "-c" "user.name=Eval Fixture"
+                                     "-c" "user.email=eval@example.invalid"
+                                     "-c" "core.hooksPath=/dev/null"
+                                     "-c" "commit.gpgsign=false"
+                                     "commit" "--quiet" "--allow-empty" "-m" "Prepared fixture baseline")
+                       :directory workspace)
+          (or (head) (error "Documentation fixture has no Git revision after setup"))))))
+
 (-> prepare (t t)
     hash-table)
 (defun prepare (workspace vars)
@@ -150,6 +182,12 @@
          (scenario-name (field scenario "name")))
     (setf (gethash "scenario" descriptor) scenario
           (gethash "fixtureScript" descriptor) (namestring (at (root) "roswell/fixture-mcp.ros")))
+    (when (equal profile "docs")
+      (setf (gethash "gitBaseline" descriptor)
+            (ensure-git-baseline
+             workspace
+             (when (hash-table-p (field vars "fixtureManifest"))
+               (loop for path being the hash-keys of (field vars "fixtureManifest") collect path)))))
     (when (equal profile "cache")
       (let ((before (dict)))
         (dolist (kind '("project" "foreign"))

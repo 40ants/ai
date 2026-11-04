@@ -2,6 +2,19 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E6-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.6 (2026-11-04)
+
+* Prepared local Git baseline revisions for documentation fixtures so
+strict source-link generation starts from a valid checkout.
+* Used the installed documentation builder through Qlot without requiring an executable
+wrapper or dependency installation.
+* Kept pinned dependency bootstrap diagnostics in the startup log while
+preserving candidate warnings and strict documentation failures in tool output.
+* Corrected `JSON` parsing examples to the installed Yason keyword and boolean
+representations, preserving semantic round-trips without custom Unicode rewriting.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E5-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.5 (2026-11-04)

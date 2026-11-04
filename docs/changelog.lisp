@@ -3,7 +3,16 @@
   (:import-from #:40ants-doc/changelog #:defchangelog))
 (in-package #:40ants-ai-evals-docs/changelog)
 
-(defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum"))
+(defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum" "JSON"))
+  (0.4.6 2026-11-04
+         "* Prepared local Git baseline revisions for documentation fixtures so
+strict source-link generation starts from a valid checkout.
+* Used the installed documentation builder through Qlot without requiring an executable
+wrapper or dependency installation.
+* Kept pinned dependency bootstrap diagnostics in the startup log while
+preserving candidate warnings and strict documentation failures in tool output.
+* Corrected JSON parsing examples to the installed Yason keyword and boolean
+representations, preserving semantic round-trips without custom Unicode rewriting.")
   (0.4.5 2026-11-04
          "* Rejected accidental external OpenCode tool directories while retaining
 read access to pinned dependencies, binaries and captured tool output.

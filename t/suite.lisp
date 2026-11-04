@@ -14,6 +14,7 @@
   (:import-from #:40ants-ai-evals-tests/suites-test)
   (:import-from #:40ants-ai-evals-tests/skill-behavior-test)
   (:import-from #:40ants-ai-evals-tests/environments-test)
+  (:import-from #:40ants-ai-evals-tests/docs-environment-test)
   (:import-from #:40ants-ai-evals-tests/qlot-environment-test)
   (:import-from #:40ants-ai-evals-tests/agents-test)
   (:import-from #:40ants-ai-evals-tests/asdf-migration-test)
