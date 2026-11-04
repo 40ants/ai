@@ -86,3 +86,31 @@
   (ok (equal "0.125.1" (40ants-ai-evals/runner::version-line
                         (format nil "Error removing old log file: ENOENT~%0.125.1~%"))))
   (ok (equal "0.126.0" (40ants-ai-evals/runner::version-line "0.126.0"))))
+
+
+(deftest batch-index-keeps-exact-invocation-ownership
+  (let ((scratch (temporary-directory "batch-concurrent-test"))
+        (entry (find-suite "handling-json-in-common-lisp")))
+    (unwind-protect
+         (progn
+           (let ((row (40ants-ai-evals/runner::run-suite-record
+                       entry (dict "agent" "opencode")
+                       (lambda (flags)
+                         (declare (ignore flags))
+                         ;; A different process can create a run during our suite.
+                         (write-text (at scratch "unrelated-run/manifest.json") "{}")
+                         (write-text (at scratch "owned-run/manifest.json") "{}")
+                         (funcall 40ants-ai-evals/runner::*run-created-hook* "owned-run")
+                         0))))
+             (ok (zerop (field row "status")))
+             (ok (equalp #("owned-run") (field row "runIds")))
+             (ok (probe-file (at scratch "unrelated-run/manifest.json"))))
+           (let ((row (40ants-ai-evals/runner::run-suite-record
+                       entry (dict "agent" "opencode")
+                       (lambda (flags)
+                         (declare (ignore flags))
+                         (funcall 40ants-ai-evals/runner::*run-created-hook* "failed-setup-run")
+                         (error "Intentional setup failure")))))
+             (ok (= 2 (field row "status")))
+             (ok (equalp #("failed-setup-run") (field row "runIds")))))
+      (remove-directory scratch))))

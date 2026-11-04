@@ -4,6 +4,10 @@
 (in-package #:40ants-ai-evals-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum" "JSON"))
+  (0.4.7 2026-11-04
+         "* Recorded exact batch run ownership instead of discovering new directories,
+so concurrent diagnostic evaluations cannot enter another suite's batch index.
+* Retained the run identifier when suite preparation fails before model execution.")
   (0.4.6 2026-11-04
          "* Prepared local Git baseline revisions for documentation fixtures so
 strict source-link generation starts from a valid checkout.

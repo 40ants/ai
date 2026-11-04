@@ -28,6 +28,8 @@
 
 (defparameter *skill-path* "plugins/common-lisp-skills/skills/writing-common-lisp/")
 (defparameter *suite-path* "evals/writing-common-lisp/")
+(defvar *run-created-hook* nil
+  "Internal callback recording run creation independently of concurrent processes.")
 
 (-> execute (list &key (:directory t))
     string)
@@ -459,6 +461,7 @@ Only the local export is enriched; Promptfoo's database is left untouched."
     (unwind-protect
          (progn
            (ensure-directories-exist (at run-dir ".keep"))
+           (when *run-created-hook* (funcall *run-created-hook* id))
            (let* ((harness (snapshot run-dir flags))
                   (40ants-ai-evals/case-resources:*inputs-root* harness)
                   (snapshot-hash (40ants-ai-evals/case-resources:input-fingerprint cases))
@@ -617,6 +620,22 @@ Only the local export is enriched; Promptfoo's database is left untouched."
       result)))
 
 
+(-> run-suite-record (hash-table hash-table &optional function)
+    hash-table)
+(defun run-suite-record (entry flags &optional (run #'run-single-eval))
+  "Record only this invocation's runs, including a run that fails during setup."
+  (let* ((child (40ants-ai-evals/checks:merge-vars flags (dict "suite" (field entry "id"))))
+         (*skill-path* (field entry "skillPath"))
+         (*suite-path* (suite-path (field entry "id")))
+         (created nil)
+         (*run-created-hook* (lambda (id) (push id created)))
+         (code (handler-case (funcall run child)
+                 (error (condition)
+                   (format *error-output* "Suite ~A failed: ~A~%" (field entry "id") condition)
+                   2))))
+    (dict "suite" (field entry "id") "status" code
+          "runIds" (coerce (nreverse created) 'vector))))
+
 (-> run-eval (hash-table)
     integer)
 (defun run-eval (flags)
@@ -633,20 +652,9 @@ Only the local export is enriched; Promptfoo's database is left untouched."
              (*suite-path* (suite-path (field entry "id"))))
         (selected-cases child)))
     (dolist (entry entries)
-      (let* ((child (40ants-ai-evals/checks:merge-vars flags (dict "suite" (field entry "id"))))
-             (*skill-path* (field entry "skillPath"))
-             (*suite-path* (suite-path (field entry "id")))
-             (before (uiop:subdirectories (at (root) ".evals/runs/")))
-             (code (handler-case (run-single-eval child)
-                     (error (condition)
-                       (format *error-output* "Suite ~A failed: ~A~%" (field entry "id") condition)
-                       2)))
-             (created (set-difference (uiop:subdirectories (at (root) ".evals/runs/")) before
-                                      :test #'equal)))
-        (unless (zerop code) (setf status 1))
-        (push (dict "suite" (field entry "id") "status" code
-                    "runIds" (map 'vector (lambda (dir)
-                                            (car (last (pathname-directory dir)))) created)) rows)
+      (let ((row (run-suite-record entry flags)))
+        (unless (zerop (field row "status")) (setf status 1))
+        (push row rows)
         (when batch-file
           (write-json batch-file
                       (dict "id" batch-id "updatedAt" (now)

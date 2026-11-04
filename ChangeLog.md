@@ -2,6 +2,14 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E7-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.7 (2026-11-04)
+
+* Recorded exact batch run ownership instead of discovering new directories,
+so concurrent diagnostic evaluations cannot enter another suite's batch index.
+* Retained the run identifier when suite preparation fails before model execution.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E6-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.6 (2026-11-04)
