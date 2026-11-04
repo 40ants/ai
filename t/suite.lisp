@@ -19,6 +19,7 @@
   (:import-from #:40ants-ai-evals-tests/asdf-migration-test)
   (:import-from #:40ants-ai-evals-tests/checks-test)
   (:import-from #:40ants-ai-evals-tests/graded-scoring-test)
+  (:import-from #:40ants-ai-evals-tests/error-report-test)
   (:import-from #:40ants-ai-evals-tests/collector-test)
   (:import-from #:40ants-ai-evals-tests/grading/contracts-test)
   (:import-from #:40ants-ai-evals-tests/history-test)

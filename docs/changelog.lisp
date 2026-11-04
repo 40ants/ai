@@ -4,6 +4,10 @@
 (in-package #:40ants-ai-evals-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum"))
+  (0.4.4 2026-11-04
+         "* Checked rejected-input error reports through runtime observations,
+including custom conditions, instead of requiring one error-call syntax.
+* Verified positive real inputs and several distinct rejected values.")
   (0.4.3 2026-11-04
          "* Increased the default OpenCode execution deadline to 630 seconds.
 * Kept file resource inventories atomic in Promptfoo to prevent duplicate samples.

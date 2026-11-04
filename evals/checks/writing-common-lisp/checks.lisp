@@ -195,8 +195,15 @@
           (lambda (node) (and (form-p node "error") (stringp (element node 1)))) all)))
 
 (define-source-check formatted-error "cl/formatted-error-present" "formatted-error-present"
-  (some (lambda (node)
-          (and (form-p node "error") (stringp (element node 1)) (>= (length node) 3))) all))
+  (let ((reports (sequence-list (field data "errorReports"))))
+    (values
+     (and reports
+          (every (lambda (observation)
+                   (let ((input (field observation "input"))
+                         (report (field observation "report")))
+                     (and (stringp input) (stringp report) (search input report))))
+                 reports))
+     "Each signaled error report must contain its rejected input.")))
 
 (define-source-check hook-export "cl/hook-export" "hook-export"
   (member (field params "hook") exports :test #'equal))

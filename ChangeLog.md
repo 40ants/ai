@@ -2,6 +2,14 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E4-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.4 (2026-11-04)
+
+* Checked rejected-input error reports through runtime observations,
+including custom conditions, instead of requiring one error-call syntax.
+* Verified positive real inputs and several distinct rejected values.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E3-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.3 (2026-11-04)

@@ -99,9 +99,18 @@
          (assert (handler-case (progn (funcall (fn "STATUS-CODE") :other) nil)
                    (error () t))))
         ((string= test-name "ensure-positive")
-         (assert (= 4 (funcall (fn "ENSURE-POSITIVE") 4)))
+         (dolist (value '(4 3/2 2.5d0))
+           (assert (eql value (funcall (fn "ENSURE-POSITIVE") value))))
          (assert (handler-case (progn (funcall (fn "ENSURE-POSITIVE") -7) nil)
-                   (error (condition) (search "-7" (princ-to-string condition))))))
+                   (error (condition) (search "-7" (princ-to-string condition)))))
+         ;; Observe real reports instead of requiring a particular ERROR syntax.
+         (map 'vector
+              (lambda (value)
+                (dict "input" (princ-to-string value)
+                      "report" (handler-case
+                                   (progn (funcall (fn "ENSURE-POSITIVE") value) :null)
+                                 (error (condition) (princ-to-string condition)))))
+              '(0 -7 -13 -42 -104729)))
         ((string= test-name "first-value")
          (assert (equal '(1 2) (funcall (fn "FIRST-VALUE") '(1 2) :ignored))))
         ((string= test-name "ready-p")
@@ -137,12 +146,15 @@
     hash-table)
 (defun inspect-source (filename package-name test-name)
   "Read actual forms and run the named functional check in this child image."
-  (let ((forms nil) (layouts nil) (read-error :null) (runtime-error :null))
+  (let ((forms nil) (layouts nil) (read-error :null) (runtime-error :null) (error-reports #()))
     (handler-case (multiple-value-setq (forms layouts) (read-source filename))
       (error (condition) (setf read-error (princ-to-string condition))))
     (when (eq read-error :null)
-      (handler-case (functional-check package-name test-name filename)
+      (handler-case
+          (let ((result (functional-check package-name test-name filename)))
+            (when (string= test-name "ensure-positive") (setf error-reports result)))
         (error (condition) (setf runtime-error (princ-to-string condition)))))
     (dict "forms" (map 'vector #'form-json forms)
           "signatureLayouts" (coerce layouts 'vector)
-          "readError" read-error "runtimeError" runtime-error)))
+          "readError" read-error "runtimeError" runtime-error
+          "errorReports" error-reports)))
