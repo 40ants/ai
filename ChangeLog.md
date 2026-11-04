@@ -1,8 +1,16 @@
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-40CHANGELOG-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-40CHANGELOG-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 # ChangeLog
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E10-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E5-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.5.0 (2026-11-04)
+
+* Connected the skill suites to the separately versioned evaluation library.
+* Kept fixture environments, calibration tests and skill-specific assertions local.
+* Preserved evaluation history while removing the embedded runner implementation.
+
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E10-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.10 (2026-11-04)
 
@@ -12,7 +20,7 @@ so browser diagnostics reach Playwright instead of failing on unsupported packag
 * Kept complete strict-build output and exposed root changelog sections.
 * Used available image inspection tools without substituting custom pixel heuristics.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E9-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E9-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.9 (2026-11-04)
 
@@ -22,7 +30,7 @@ literal per-workspace environment overrides, including nested Qlot commands.
 ignored vendor files, and preserved environment metadata during grading.
 * Clarified automatic selection of Rove testing and live Lisp evaluation skills.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E8-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E8-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.8 (2026-11-04)
 
@@ -32,7 +40,7 @@ discovers package-inferred test suites instead of reporting zero tests.
 * Made Rove guidance record condition predicates as assertions and propagate
 failed suites through the `ASDF` test operation and process exit status.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E7-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E7-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.7 (2026-11-04)
 
@@ -40,7 +48,7 @@ failed suites through the `ASDF` test operation and process exit status.
 so concurrent diagnostic evaluations cannot enter another suite's batch index.
 * Retained the run identifier when suite preparation fails before model execution.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E6-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E6-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.6 (2026-11-04)
 
@@ -53,7 +61,7 @@ preserving candidate warnings and strict documentation failures in tool output.
 * Corrected `JSON` parsing examples to the installed Yason keyword and boolean
 representations, preserving semantic round-trips without custom Unicode rewriting.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E5-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E5-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.5 (2026-11-04)
 
@@ -61,7 +69,7 @@ representations, preserving semantic round-trips without custom Unicode rewritin
 read access to pinned dependencies, binaries and captured tool output.
 * Recommended relative paths inside isolated evaluation workspaces.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E4-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E4-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.4 (2026-11-04)
 
@@ -69,7 +77,7 @@ read access to pinned dependencies, binaries and captured tool output.
 including custom conditions, instead of requiring one error-call syntax.
 * Verified positive real inputs and several distinct rejected values.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E3-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E3-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.3 (2026-11-04)
 
@@ -78,7 +86,7 @@ including custom conditions, instead of requiring one error-call syntax.
 * Observed recovered Lisp runtime deadlines without depending on candidate handlers.
 * Clarified project-only cache cleanup and preserved spaces in helper paths.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E2-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E2-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.2 (2026-11-04)
 
@@ -86,7 +94,7 @@ including custom conditions, instead of requiring one error-call syntax.
 * Awarded half credit for inline Serapeum return types and full credit for
 return types on a separate line. Missing signatures remain failures.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E1-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E1-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.1 (2026-11-04)
 
@@ -96,7 +104,7 @@ return types on a separate line. Missing signatures remain failures.
 * Routed the prepared agent shell through Qlot for complete compound commands.
 * Retained `UIOP` bootstrap diagnostics in sample logs instead of tool output.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.0 (2026-11-02)
 
@@ -106,7 +114,7 @@ file parameters for independent check extensions.
 * Prepared workspaces and replay inputs from immutable snapshots while retaining
 support for historical inline case inputs.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E3-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E3-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.3.0 (2026-11-01)
 
@@ -117,7 +125,7 @@ suite selection, independent behavioral checks, and reproducible tool environmen
 * Preserved provider artifacts across evaluator timeouts and exposed prepared
 `MCP` runners with native tool-result evidence.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E2-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E2-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.2.0 (2026-11-01)
 
@@ -125,7 +133,7 @@ suite selection, independent behavioral checks, and reproducible tool environmen
 test system and package namespace to `40ants-ai-evals-tests/*`.
 * Declared explicit dependencies for evaluation check systems.
 
-<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E1-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+<a id="x-2840ANTS-AI-SKILLS-DOCS-2FCHANGELOG-3A-3A-7C0-2E1-2E0-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.1.0 (2026-11-01)
 

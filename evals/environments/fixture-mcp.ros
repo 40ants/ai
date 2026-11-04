@@ -1,0 +1,15 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- "$0" "$@"
+|#
+(require :asdf)
+(let* ((engine (uiop:ensure-directory-pathname (uiop:getenv "SKILL_EVAL_ENGINE_ROOT")))
+       (project (uiop:ensure-directory-pathname (uiop:getenv "SKILL_EVAL_PROJECT_ROOT"))))
+  (load (merge-pathnames "roswell/bootstrap.lisp" engine))
+  (let ((*standard-output* *error-output*) (*trace-output* *error-output*))
+    (asdf:load-asd (merge-pathnames "evals/environments/40ants-ai-skill-test-environments.asd" project))
+    (asdf:load-system "40ants-ai-skill-test-environments/fixture-mcp")))
+(uiop:define-package #:40ants-ai-skill-test-environments/roswell/fixture-mcp
+  (:use #:cl) (:import-from #:40ants-ai-skill-test-environments/fixture-mcp #:main))
+(in-package #:40ants-ai-skill-test-environments/roswell/fixture-mcp)

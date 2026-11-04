@@ -49,7 +49,7 @@
     (unwind-protect
          (let* ((candidate (write-text (at scratch "candidate.lisp") source))
                 (stdout (run-command
-                         (list "ros" "-Q" "--" (namestring (at (root) "roswell/check-lisp.ros"))
+                         (list "ros" "-Q" "--" (namestring (at (root) "evals/checks/writing-common-lisp/check-lisp.ros"))
                                (namestring candidate) (field vars "package")
                                (field vars "runtime"))
                          :directory scratch :timeout 20))

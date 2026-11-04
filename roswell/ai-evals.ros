@@ -4,24 +4,7 @@
 exec ros -Q -- "$0" "$@"
 |#
 (require :asdf)
-(let* ((script (or *load-truename* *compile-file-truename*))
-       (root (uiop:pathname-parent-directory-pathname
-              (uiop:pathname-directory-pathname script))))
-  (let ((*standard-output* *error-output*) (*trace-output* *error-output*))
-    (asdf:initialize-source-registry
-     `(:source-registry (:directory ,root) :ignore-inherited-configuration))
-    (load (merge-pathnames ".qlot/setup.lisp"
-            (uiop:ensure-directory-pathname
-              (or (uiop:getenv "SKILL_EVAL_DEPENDENCY_ROOT") root)))
-          :verbose nil :print nil)
-    (asdf:load-asd (merge-pathnames "40ants-ai-evals.asd" root))
-    (asdf:load-system "40ants-ai-evals")))
-
-(uiop:define-package #:40ants-ai-evals/roswell/ai-evals
-  (:use #:cl))
+(let ((engine (uiop:getenv "SKILL_EVAL_ENGINE_ROOT")))
+  (unless engine (error "Enter the project nix-shell to load the pinned eval library"))
+  (load (merge-pathnames "roswell/entry.lisp" (uiop:ensure-directory-pathname engine))))
 (in-package #:40ants-ai-evals/roswell/ai-evals)
-
-(serapeum:-> main (&rest string)
-    t)
-(defun main (&rest arguments)
-  (uiop:quit (40ants-ai-evals/cli:main arguments)))

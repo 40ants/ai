@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "defaultSuite": "writing-common-lisp",
+  "suiteCatalog": "evals/suites.json",
+  "systems": [
+    {
+      "system": "40ants-ai-skill-test-environments",
+      "asd": "evals/environments/40ants-ai-skill-test-environments.asd"
+    }
+  ],
+  "testSystem": "40ants-ai-skills-tests",
+  "snapshotPaths": [
+    "evals/",
+    "qlfile",
+    "qlfile.lock",
+    "docs/changelog.lisp",
+    "docs/index.lisp",
+    "README.md",
+    "roswell/"
+  ],
+  "fixtureInstructions": "evals/environments/workspace.md",
+  "codexNativeSkillReferences": [
+    "writing-common-lisp"
+  ]
+}

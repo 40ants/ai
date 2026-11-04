@@ -1,9 +1,13 @@
-(uiop:define-package #:40ants-ai-evals-docs/changelog
+(uiop:define-package #:40ants-ai-skills-docs/changelog
   (:use #:cl)
   (:import-from #:40ants-doc/changelog #:defchangelog))
-(in-package #:40ants-ai-evals-docs/changelog)
+(in-package #:40ants-ai-skills-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum" "JSON"))
+  (0.5.0 2026-11-04
+         "* Connected the skill suites to the separately versioned evaluation library.
+* Kept fixture environments, calibration tests and skill-specific assertions local.
+* Preserved evaluation history while removing the embedded runner implementation.")
   (0.4.10 2026-11-04
          "* Aligned the browser bootstrap helper with the pinned Python 3.13 runtime,
 so browser diagnostics reach Playwright instead of failing on unsupported packages.
