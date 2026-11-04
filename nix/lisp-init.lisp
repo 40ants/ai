@@ -12,18 +12,27 @@
       (format *error-output* "Pinned ASDF bootstrap failed; diagnostics: ~A~%" log)
       (error condition))))
 (defun cl-user::skill-eval-initialize-output-translations (&optional (workspace (uiop:getcwd)))
-  "Reuse provisioned dependency FASLs while confining candidate outputs to WORKSPACE."
-  (let* ((root (uiop:ensure-directory-pathname (uiop:getenv "SKILL_EVAL_DEPENDENCY_ROOT")))
-         (workspace (uiop:ensure-directory-pathname workspace))
+  "Reuse pinned dependency outputs and preserve reversible source paths for test discovery."
+  (let* ((root (truename (uiop:ensure-directory-pathname (uiop:getenv "SKILL_EVAL_DEPENDENCY_ROOT"))))
+         (workspace (truename (uiop:ensure-directory-pathname workspace)))
          (candidate (merge-pathnames ".eval-cache/common-lisp/" workspace))
-         (shared (merge-pathnames ".evals/cache/dependencies/" root)))
+         (shared (merge-pathnames ".evals/cache/dependencies/" root))
+         (candidate-cache (asdf:resolve-location `(,candidate :implementation) :ensure-directory t))
+         (shared-cache (asdf:resolve-location `(,shared :implementation) :ensure-directory t))
+         (project-root-p (equal workspace root)))
+    ;; Rove reverses the standard ASDF cache prefix to recover a loaded file's
+    ;; source pathname. Retain the absolute source directory below that prefix.
+    (setf asdf:*user-cache* (if project-root-p shared-cache candidate-cache))
     (asdf:initialize-output-translations
      `(:output-translations
-       ,@(unless (equal (truename workspace) (truename root))
-           `(((,workspace :**/ :*.*.*) (,candidate :implementation))))
-       ((,root :**/ :*.*.*) (,shared :implementation))
-       (t (,candidate :implementation))
+       ,@(unless project-root-p
+           `(((,workspace :**/ :*.*.*)
+              (,candidate-cache ,@(cdr (pathname-directory workspace)) :**/ :*.*.*))))
+       ((,root :**/ :*.*.*)
+        (,shared-cache ,@(cdr (pathname-directory root)) :**/ :*.*.*))
+       (t (,candidate-cache :**/ :*.*.*))
        :ignore-inherited-configuration))))
+
 (let* ((root (uiop:ensure-directory-pathname (uiop:getenv "SKILL_EVAL_DEPENDENCY_ROOT")))
        (setup (merge-pathnames ".qlot/setup.lisp" root))
        (log (merge-pathnames ".eval-cache/lisp-startup.log" (uiop:getcwd))))
@@ -45,6 +54,8 @@
           (asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration))
           (load setup :verbose nil :print nil)
           (asdf:load-system "uiop" :verbose nil)
+          ;; Qlot may upgrade UIOP and its cache defaults during setup.
+          (cl-user::skill-eval-initialize-output-translations)
           (if (equal (truename root) (truename (uiop:getcwd)))
               (pushnew (uiop:getcwd) asdf:*central-registry* :test (function equal))
               (progn

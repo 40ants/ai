@@ -2,6 +2,16 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E8-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.8 (2026-11-04)
+
+* Preserved source pathnames beneath isolated compilation caches so Rove
+discovers package-inferred test suites instead of reporting zero tests.
+* Kept dependency outputs shared while confining candidate outputs to each workspace.
+* Made Rove guidance record condition predicates as assertions and propagate
+failed suites through the `ASDF` test operation and process exit status.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E7-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.7 (2026-11-04)

@@ -6,7 +6,8 @@ description: Use when writing or running tests with the Rove framework in a Comm
 # Testing with Rove
 
 ## Overview
-Rove is the test framework used across these CL projects. Its `signals` assertion has a **counter-intuitive argument order** (form first, condition second) that is the single most common Rove bug.
+Rove uses `ok` to record assertions. Its `signals` predicate takes the form first
+and the condition type second; wrap that predicate in `ok`.
 
 ## When to Use
 - Writing a new test or `deftest`
@@ -18,34 +19,77 @@ Rove is the test framework used across these CL projects. Its `signals` assertio
 (defmacro signals (form &optional (condition ''error)))
 ```
 **The form under test is the FIRST argument; the condition type is the OPTIONAL SECOND (defaults to `'error`).**
+`signals` returns a boolean; a bare call does not record a Rove assertion.
 
 ```lisp
 ;; CORRECT — (do-thing) is evaluated, expected to signal my-error
-(signals (do-thing) 'my-error)
-(signals (do-thing))                  ; defaults to 'error
+(ok (signals (do-thing) 'my-error))
+(ok (signals (do-thing)))             ; defaults to 'error
 
 ;; WRONG — 'my-error becomes the form (never signals); (do-thing) is read as the type
-(signals 'my-error (do-thing))
+(ok (signals 'my-error (do-thing)))
 ```
-The wrong form silently misbehaves: it evaluates `'my-error` (which does not signal) and treats `(do-thing)` as the condition type specifier. The test does not do what it looks like it does — every baseline agent writes it the wrong way first.
+Reversing the arguments does not test the intended call. Use the specific condition
+type when an unrelated error must not count as success.
 
 ## Running tests
 ```lisp
 (asdf:test-system :myapp-test)                                ; whole system
 (rove:run :myapp-test/models/foo)                            ; one module
-(rove:run-test 'myapp-test/models/foo::test-adding-foo)      ; one test
+(rove:run-test 'myapp-test/models/foo::adding-foo)      ; one test
 ```
+
+### Connect Rove to ASDF without losing failures
+
+Keep the project's existing system layout. For package-inferred systems, connect
+the main system's existing definition to its test system with:
+
+```lisp
+;; A property inside the existing MYAPP system definition:
+:in-order-to ((asdf:test-op (asdf:test-op "myapp-tests")))
+```
+
+A separate test system can load inferred test modules and propagate Rove's result:
+
+```lisp
+(asdf:defsystem "myapp-tests"
+  :class :package-inferred-system
+  :pathname "tests"
+  :depends-on ("myapp" "myapp-tests/core-test")
+  :perform (asdf:test-op (operation system)
+             (declare (ignore operation))
+             (unless (uiop:symbol-call :rove :run system)
+               (error "Rove tests failed for ~A" (asdf:component-name system)))))
+```
+
+The package in `tests/core-test.lisp` is `myapp-tests/core-test`; declare Rove and
+source-package imports there with `uiop:define-package`. Keep each `deftest`
+registered in its test package. For an existing non-inferred test system, retain
+its component list and use the same failure propagation in its test-op.
+
+ASDF does not treat a returned `nil` as an error: explicitly signal an error when
+`rove:run` returns false. Verify through the real command:
+
+```bash
+qlot exec sbcl --non-interactive --eval '(asdf:test-system "myapp")'
+```
+
+Confirm that the intended tests actually ran. A report of `0 tests completed`
+does not validate newly added tests. A deliberately broken implementation must
+make the test command exit nonzero; a dependency/load failure is a different
+problem and does not prove the assertions caught that broken behavior.
 
 ### Capturing per-assertion output from the REPL
 `rove:run-test` prints its report to `*standard-output*` and returns a different value. Wrap it to see the per-assertion output:
 ```lisp
 (with-output-to-string (*standard-output*)
-  (rove:run-test 'myapp-test/models/foo::test-adding-foo))
+  (rove:run-test 'myapp-test/models/foo::adding-foo))
 ```
 
 ## Test file conventions
 - Tests live in `tests/` mirroring `src/`, named `*-test.lisp`.
-- Structure: `(deftest <unit> ... (testing "<aspect>" ...))`. Name the `deftest` after the unit under test.
+- Structure: `(deftest <unit> ... (testing "<aspect>" ...))`. Preserve an explicitly requested test name: `rove:run-test` resolves the exact `deftest` symbol; prepending `test-` creates a different test.
+- Keep test names local to the test package. If a test has the same name as a source function, declare an empty source-package import and call that function with its package prefix instead of importing its name into the test package.
 - Add brand-new test files to the test system's ASDF components when not auto-inferred.
 - Write the failing test before the implementation.
 
@@ -75,22 +119,22 @@ strict compilation check from **using-common-lisp-repl**; this catches a slot
 whose `:initform` does not satisfy its declared CLOS type.
 
 ## Testing internal (`%`-prefixed) functions
-Private functions named like `%helper` cannot be referenced from the test package. To test them:
-```lisp
-;; in the source package
-(:export #:%helper)
-;; in the test package
-(:import-from #:myapp/src/foo #:%helper)
-```
-The `%` prefix already signals "internal"; exporting it for tests is accepted practice.
+A `%` prefix is a naming convention, not an access restriction. Tests can refer
+to an unexported symbol as `myapp/foo::%helper`; use an empty
+`(:import-from #:myapp/foo)` clause to declare that package dependency in an
+inferred test module. Preserve the project's API boundary rather than exporting
+a private helper solely to make single-colon syntax work.
+
+If the project deliberately exports internal helpers for tests, follow that
+convention with an explicit import.
 
 ## Common Mistakes
 | Symptom | Fix |
 |---|---|
-| `(signals 'my-error (do-thing))` — test passes/fails for the wrong reason | Swap to `(signals (do-thing) 'my-error` — form first, type second |
+| `(ok (signals 'my-error (do-thing)))` — test passes/fails for the wrong reason | Use `(ok (signals (do-thing) 'my-error))` — form first, type second |
 | `LET` on a `define-global-var` global fails or behaves strangely | Use `setf` + `unwind-protect`, not dynamic rebinding |
 | `rove:run-test` output not visible | Wrap in `(with-output-to-string (*standard-output*) ...)` |
-| Cannot reference `%helper` from tests | `(:export #:%helper)` in source, `(:import-from ...)` in test |
+| Cannot reference `%helper` from tests | Use `myapp/foo::%helper` and declare the source package dependency; follow explicit project export conventions |
 | New test file not picked up | Add it to the test system's ASDF components |
 
 ## Related skills

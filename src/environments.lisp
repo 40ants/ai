@@ -71,7 +71,7 @@
                          "chromiumRevision" (or (uiop:getenv "SKILL_EVAL_CHROMIUM_REVISION") "1248")
                          "trivial-glob" "0c2675d9452ed164970f2fc4a0e41784ebee819a"
                          "sblint" "1037296f604c3210ce073a53539d4ae95b0c2f8c"
-                         "fixtureProtocol" 3)))
+                         "fixtureProtocol" 4)))
     (unless (member profile '("lisp" "cache" "repl" "lint" "docs" "deploy" "playwright" "all") :test #'equal)
       (error "Unknown eval environment: ~A" profile))
     (when check-tools

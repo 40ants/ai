@@ -4,6 +4,12 @@
 (in-package #:40ants-ai-evals-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum" "JSON"))
+  (0.4.8 2026-11-04
+         "* Preserved source pathnames beneath isolated compilation caches so Rove
+discovers package-inferred test suites instead of reporting zero tests.
+* Kept dependency outputs shared while confining candidate outputs to each workspace.
+* Made Rove guidance record condition predicates as assertions and propagate
+failed suites through the ASDF test operation and process exit status.")
   (0.4.7 2026-11-04
          "* Recorded exact batch run ownership instead of discovering new directories,
 so concurrent diagnostic evaluations cannot enter another suite's batch index.
