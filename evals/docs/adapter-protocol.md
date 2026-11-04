@@ -168,3 +168,17 @@ include `qlfile.lock`; manifests record its SHA-256, the overall `timeoutMs`, an
 agent profiles including `executionTimeoutMs`. Reproducing an old harness requires restoring its
 recorded dependencies too. Authentication files and process environments are
 never sent in either JSON protocol.
+
+## Native OpenCode directory policy
+
+Session permissions deny `external_directory` by default. Explicit read-only
+exceptions cover the pinned Nix store, project dependency root, system binary
+directories, `/dev` and the server's captured tool-output directory. Native
+`edit`, `write` and `patch` operations cannot edit those external exceptions.
+This rejects a mistyped temporary workspace path rather than creating a second
+project outside the sample. Use relative file paths and the session's default
+shell working directory.
+
+These are native tool permission checks, not an operating-system sandbox;
+shell path inference remains best effort. See the
+[OpenCode V2 permission reference](https://opencode.ai/v2/docs/permissions).

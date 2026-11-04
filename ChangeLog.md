@@ -2,6 +2,14 @@
 
 # ChangeLog
 
+<a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E5-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
+
+## 0.4.5 (2026-11-04)
+
+* Rejected accidental external OpenCode tool directories while retaining
+read access to pinned dependencies, binaries and captured tool output.
+* Recommended relative paths inside isolated evaluation workspaces.
+
 <a id="x-2840ANTS-AI-EVALS-DOCS-2FCHANGELOG-3A-3A-7C0-2E4-2E4-7C-2040ANTS-DOC-2FLOCATIVES-3ASECTION-29"></a>
 
 ## 0.4.4 (2026-11-04)

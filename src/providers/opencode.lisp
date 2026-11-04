@@ -339,6 +339,26 @@ Token counts include compaction calls; only completed target skill reads count."
     (unless connected (error "Fixture MCP did not connect before model execution"))
     connected))
 
+(-> session-permissions (hash-table)
+    vector)
+(defun session-permissions (server)
+  "Reject external tool locations while retaining read access to pinned tools."
+  (let ((rules (list (dict "action" "*" "resource" "*" "effect" "allow")
+                     (dict "action" "external_directory" "resource" "*" "effect" "deny"))))
+    (dolist (directory
+             (append '("/nix/store/" "/usr/bin/" "/bin/" "/dev/")
+                     (when (uiop:getenv "SKILL_EVAL_DEPENDENCY_ROOT")
+                       (list (namestring (truename (uiop:getenv "SKILL_EVAL_DEPENDENCY_ROOT")))))
+                     (when (field server "stateDir")
+                       (list (namestring (at (field server "stateDir") "data/opencode/tool-output/"))))))
+      (let ((pattern (concatenate 'string
+                       (namestring (uiop:ensure-directory-pathname directory)) "*")))
+        (setf rules (append rules
+                            (list (dict "action" "external_directory" "resource" pattern "effect" "allow")
+                                  (dict "action" "edit" "resource" pattern "effect" "deny"))))))
+    (coerce (append rules (list (dict "action" "question" "resource" "*" "effect" "deny")))
+            'vector)))
+
 (-> call-agent (hash-table)
     hash-table)
 (defun call-agent (request)
@@ -378,9 +398,7 @@ Timeouts interrupt execution before collecting the projected export and durable 
                                 "agent" (or (field config "profile" "mode") "build")
                                 "model" (model-reference model)
                                 "permissions"
-                                (vector (dict "action" "*" "resource" "*" "effect" "allow")
-                                        (dict "action" "question" "resource" "*"
-                                              "effect" "deny")))
+                                (session-permissions server))
                           30 nil)))
                  (setf (gethash "session" trace) session
                        session-id (field session "data" "id"))

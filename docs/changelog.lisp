@@ -4,6 +4,10 @@
 (in-package #:40ants-ai-evals-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "API" "APM" "Codex" "OpenCode" "Promptfoo" "MCP" "Qlot" "UIOP" "Serapeum"))
+  (0.4.5 2026-11-04
+         "* Rejected accidental external OpenCode tool directories while retaining
+read access to pinned dependencies, binaries and captured tool output.
+* Recommended relative paths inside isolated evaluation workspaces.")
   (0.4.4 2026-11-04
          "* Checked rejected-input error reports through runtime observations,
 including custom conditions, instead of requiring one error-call syntax.

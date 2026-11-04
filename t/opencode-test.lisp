@@ -54,13 +54,14 @@
 (deftest v2-fresh-sessions-and-partial-failure
   (let* ((scratch (temporary-directory "opencode-test"))
          (source (at scratch "fixture/"))
-         (counter 0) (interrupted nil) (failed nil) (locations nil)
+         (counter 0) (interrupted nil) (failed nil) (locations nil) (permissions nil)
          (*http-request*
            (lambda (server method path body timeout raw-p)
              (declare (ignore server method timeout raw-p))
              (cond
                ((equal path "/api/session")
                 (push (field body "location" "directory") locations)
+                (push (field body "permissions") permissions)
                 (ok (equal "zai-coding-plan" (field body "model" "providerID")))
                 (dict "data" (dict "id" (format nil "ses_~D" (incf counter)))))
                ((search "/prompt" path)
@@ -86,6 +87,11 @@
              (ok (null (field first "error")))
              (ok (not (equal (field first "sessionId") (field second "sessionId"))))
              (ok (not (equal (first locations) (second locations))))
+             (ok (some (lambda (rule)
+                         (and (equal "external_directory" (field rule "action"))
+                              (equal "*" (field rule "resource"))
+                              (equal "deny" (field rule "effect"))))
+                       (first permissions)))
              (ok (probe-file (at (field first "metadata" "workingDir")
                                  ".opencode/skills/example/SKILL.md")))
              (ok (field (read-json trace-path) "export"))
