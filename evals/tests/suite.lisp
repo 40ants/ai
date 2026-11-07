@@ -1,0 +1,48 @@
+;;;; Load project check extensions and run the package-inferred test system.
+(uiop:define-package #:40ants-ai-skills-tests/suite
+  (:use #:cl)
+  (:import-from #:asdf #:component-name #:find-system #:system-depends-on)
+  (:import-from #:serapeum #:-> #:dict)
+  (:import-from #:rove #:run)
+  (:import-from #:uiop #:string-prefix-p)
+  (:import-from #:40ants-ai-evals/util #:field)
+  (:import-from #:40ants-ai-skill-test-environments/environments)
+  (:import-from #:40ants-ai-evals/checks #:load-check-systems)
+  (:import-from #:40ants-ai-evals/suites #:catalog)
+  (:import-from #:40ants-ai-evals/runner #:grading-vars)
+  (:import-from #:40ants-ai-skills-tests/case-resources-test)
+  (:import-from #:40ants-ai-skills-tests/recovery-test)
+  (:import-from #:40ants-ai-skills-tests/suites-test)
+  (:import-from #:40ants-ai-skills-tests/skill-behavior-test)
+  (:import-from #:40ants-ai-skills-tests/environments-test)
+  (:import-from #:40ants-ai-skills-tests/sample-environment-test)
+  (:import-from #:40ants-ai-skills-tests/docs-environment-test)
+  (:import-from #:40ants-ai-skills-tests/qlot-environment-test)
+  (:import-from #:40ants-ai-skills-tests/rove-discovery-test)
+  (:import-from #:40ants-ai-skills-tests/asdf-migration-test)
+  (:import-from #:40ants-ai-skills-tests/checks-test)
+  (:import-from #:40ants-ai-skills-tests/graded-scoring-test)
+  (:import-from #:40ants-ai-skills-tests/error-report-test)
+  (:import-from #:40ants-ai-skills-tests/collector-test)
+  (:import-from #:40ants-ai-skills-tests/grading/contracts-test)
+  (:export #:run-tests))
+(in-package #:40ants-ai-skills-tests/suite)
+
+(-> run-tests (t)
+    boolean)
+(defun run-tests (system)
+  "Load configured check extensions before Rove runs the inferred test modules."
+  (dolist (suite (catalog))
+    (let ((vars (grading-vars (dict "suite" (field suite "id")))))
+      (load-check-systems (field vars "checkSystems"))))
+  (let ((test-systems
+          (remove-if-not
+           (lambda (dependency)
+             (and (stringp dependency)
+                  (string-prefix-p "40ants-ai-skills-tests/" dependency)
+                  (not (string= dependency "40ants-ai-skills-tests/suite"))))
+           (system-depends-on
+            (find-system "40ants-ai-skills-tests/suite")))))
+    (unless test-systems
+      (error "No inferred test modules are registered for ~A." (component-name system)))
+    (run test-systems)))

@@ -1,0 +1,29 @@
+{
+  "description": "writing-common-lisp observable behavior v2 (native Codex SDK)",
+  "defaultTest": {
+    "vars": {
+      "checkSystems": [
+        {
+          "system": "40ants-ai-evals-common-checks"
+        },
+        {
+          "system": "40ants-ai-evals-common-lisp-checks",
+          "asd": "evals/checks/writing-common-lisp/40ants-ai-evals-common-lisp-checks.asd"
+        }
+      ],
+      "checks": [
+        {
+          "profile": "common/contract"
+        },
+        {
+          "profile": "common-lisp/source",
+          "when": "file"
+        }
+      ]
+    }
+  },
+  "evaluateOptions": {
+    "maxConcurrency": 1
+  },
+  "tests": "file://cases.json"
+}

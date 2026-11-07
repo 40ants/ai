@@ -1,0 +1,1 @@
+(asdf:defsystem "demo-tests" :class :package-inferred-system :pathname "tests/" :depends-on ("rove" "demo" "demo-tests/core-test") :perform (asdf:test-op (op system) (declare (ignore op)) (unless (uiop:symbol-call :rove :run system) (error "Tests failed"))))

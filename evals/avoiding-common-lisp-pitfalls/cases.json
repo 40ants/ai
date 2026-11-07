@@ -1,0 +1,265 @@
+[
+  {
+    "description": "smoke: Use $avoiding-common-lisp-pitfalls",
+    "vars": {
+      "suite": "avoiding-common-lisp-pitfalls",
+      "skillName": "avoiding-common-lisp-pitfalls",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $avoiding-common-lisp-pitfalls. Implement CAPTURE-ARGUMENT(text) in src/process.lisp by invoking /usr/bin/printf with format %s and the provided argument through UIOP:RUN-PROGRAM. Return stdout exactly; whitespace and shell metacharacters are literal.",
+      "shouldTrigger": true,
+      "fixtures": "cases/smoke/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/process.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/smoke/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "stripped-output: Use $avoiding-common-lisp-pitfalls",
+    "vars": {
+      "suite": "avoiding-common-lisp-pitfalls",
+      "skillName": "avoiding-common-lisp-pitfalls",
+      "id": "stripped-output",
+      "group": "development",
+      "task": "Use $avoiding-common-lisp-pitfalls. Implement CURRENT-TOKEN in src/process.lisp by running /usr/bin/printf with \"token\\n\", returning a string without the trailing newline through UIOP output specification. Do not manually trim it.",
+      "shouldTrigger": true,
+      "fixtures": "cases/stripped-output/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "stripped-output"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/process.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/stripped-output/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "event-order: Use $avoiding-common-lisp-pitfalls",
+    "vars": {
+      "suite": "avoiding-common-lisp-pitfalls",
+      "skillName": "avoiding-common-lisp-pitfalls",
+      "id": "event-order",
+      "group": "development",
+      "task": "Use $avoiding-common-lisp-pitfalls. Implement EXERCISE-EVENTS in src/process.lisp using event-emitter. Create emitter, register a listener on :tick, emit 7, remove listener, emit 9. Return the list of values observed, which must be (7).",
+      "shouldTrigger": true,
+      "fixtures": "cases/event-order/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "event-order"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/process.lisp"
+            ],
+            "systems": [
+              "event-emitter"
+            ],
+            "assertionsFile": "cases/event-order/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-method-preservation: Use $avoiding-common-lisp-pitfalls",
+    "vars": {
+      "suite": "avoiding-common-lisp-pitfalls",
+      "skillName": "avoiding-common-lisp-pitfalls",
+      "id": "heldout-method-preservation",
+      "group": "holdout",
+      "task": "Use $avoiding-common-lisp-pitfalls. Dependency demo/base has LABEL on ITEM returning 42. In src/process.lisp add subclass NAMED-ITEM and an ITEM-LABEL factory returning a NAMED-ITEM whose LABEL returns \"custom\". Preserve the dependency generic behavior for ordinary ITEM instances.",
+      "shouldTrigger": true,
+      "fixtures": "cases/heldout-method-preservation/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "heldout-method-preservation"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/base.lisp",
+              "src/process.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/heldout-method-preservation/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: Implement CAPTURE-ARGUMENT(text) in src/process",
+    "vars": {
+      "suite": "avoiding-common-lisp-pitfalls",
+      "skillName": "avoiding-common-lisp-pitfalls",
+      "id": "automatic",
+      "group": "development",
+      "task": "Implement CAPTURE-ARGUMENT(text) in src/process.lisp with UIOP:RUN-PROGRAM calling /usr/bin/printf %s. Return its stdout exactly, with literal whitespace and shell metacharacters in text.",
+      "shouldTrigger": true,
+      "fixtures": "cases/automatic/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/process.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/automatic/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "avoiding-common-lisp-pitfalls",
+      "skillName": "avoiding-common-lisp-pitfalls",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -10,10 +10,20 @@ Use this skill to make Python Playwright reproducible in a project with `nix-she
 ## Workflow
 
 1. Decide whether the target is static or server-backed.
-2. Run `scripts/bootstrap_python_playwright_nix.sh <project-dir>` to write `shell.nix` and `run_smoke_test.sh`.
+2. Inspect the project environment first. Keep an existing `shell.nix` and its
+   pinned versions. Use `scripts/bootstrap_python_playwright_nix.sh <project-dir>
+   [browser-path]` only when its output files are absent: the helper refuses to overwrite
+   them. If `PLAYWRIGHT_BROWSER_PATH` is supplied, pass that exact path as the
+   second argument rather than replacing it with a machine-specific default.
 3. For static pages, run `scripts/generate_static_smoke_test.py --output <project-dir>/smoke_test.py --paths index.html ...`.
-4. Run `./run_smoke_test.sh`.
-5. Review `test-shots/`.
+4. Run `./run_smoke_test.sh` through the project runner. Use a prepared browser
+   MCP runner when the environment provides one, preserving its real exit status
+   and output.
+5. Review `test-shots/` using an image-reading tool when available. If this
+   model/session cannot view images, report that limitation and verify navigation,
+   page assertions, generated files and viewport dimensions through Playwright.
+   Do not claim visual inspection from a homemade PNG decoder or pixel-color
+   heuristic, and do not retry a disconnected desktop browser.
 
 ## Static Pages
 

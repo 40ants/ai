@@ -1,6 +1,6 @@
 ---
 name: using-common-lisp-repl
-description: Use when developing Common Lisp interactively against a running image reachable through an MCP eval tool (eval_lisp_form / eval-lisp-form) and you need to evaluate forms safely, reload a file after editing it, capture REPL output, or locate a dependency's sources on disk.
+description: Load before using eval_lisp_form / eval-lisp-form or another MCP tool connected to a live Common Lisp image, including a single stateful call. Covers evaluation, inspecting live values, reloading changed files, output capture, and deadlines.
 ---
 
 # Using the Common Lisp REPL

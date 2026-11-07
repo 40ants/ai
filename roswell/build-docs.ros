@@ -1,0 +1,14 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- "$0" "$@"
+|#
+(require :asdf)
+(load (merge-pathnames "roswell/bootstrap.lisp"
+        (uiop:ensure-directory-pathname (uiop:getenv "SKILL_EVAL_ENGINE_ROOT"))))
+(let ((*standard-output* *error-output*))
+  (asdf:load-system "docs-builder")
+  (asdf:load-asd (merge-pathnames "40ants-ai-skills-docs.asd" (40ants-ai-evals/util:root)))
+  (asdf:load-system "40ants-ai-skills-docs"))
+(uiop:symbol-call :docs-builder :build "40ants-ai-skills-docs" :error-on-warnings t :local t)
+(uiop:quit 0)

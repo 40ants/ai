@@ -1,0 +1,272 @@
+[
+  {
+    "description": "smoke: Use $handling-json-in-common-lisp",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $handling-json-in-common-lisp. Implement exported ROUNDTRIP in src/json.lisp: accept a JSON string and return encoded JSON preserving objects, arrays, null, booleans and Unicode. No dependency installation.",
+      "shouldTrigger": true,
+      "fixtures": "cases/smoke/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertionsFile": "cases/smoke/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "null-versus-missing: Use $handling-json-in-common-lisp",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "null-versus-missing",
+      "group": "development",
+      "task": "Use $handling-json-in-common-lisp. Implement NULL-FIELD-P(object,key) in src/json.lisp, true only for a present JSON-null value. False and absent keys must not count as null.",
+      "shouldTrigger": true,
+      "fixtures": "cases/null-versus-missing/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "null-versus-missing"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertionsFile": "cases/null-versus-missing/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "nested-object: Use $handling-json-in-common-lisp",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "nested-object",
+      "group": "development",
+      "task": "Use $handling-json-in-common-lisp. Implement MAKE-RESPONSE(name,count) returning JSON object with user={name:name}, count=count, cursor=null. Use string-keyed dictionaries.",
+      "shouldTrigger": true,
+      "fixtures": "cases/nested-object/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "nested-object"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertionsFile": "cases/nested-object/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-nested-roundtrip: Use $handling-json-in-common-lisp",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "heldout-nested-roundtrip",
+      "group": "holdout",
+      "task": "Use $handling-json-in-common-lisp. Implement ROUNDTRIP in src/json.lisp preserving nested empty objects and arrays, false, null and strings. Function returns encoded JSON string.",
+      "shouldTrigger": true,
+      "fixtures": "cases/heldout-nested-roundtrip/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "heldout-nested-roundtrip"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertionsFile": "cases/heldout-nested-roundtrip/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: In this Common Lisp YASON project implement ROUNDTRIP in src/json",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "automatic",
+      "group": "development",
+      "task": "In this Common Lisp YASON project implement ROUNDTRIP in src/json.lisp, returning encoded JSON that preserves objects, arrays, null, booleans and Unicode. No dependency installation.",
+      "shouldTrigger": true,
+      "fixtures": "cases/automatic/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/json.lisp"
+            ],
+            "systems": [
+              "yason"
+            ],
+            "assertionsFile": "cases/automatic/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "handling-json-in-common-lisp",
+      "skillName": "handling-json-in-common-lisp",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

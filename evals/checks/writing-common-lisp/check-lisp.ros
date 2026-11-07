@@ -1,0 +1,28 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- "$0" "$@"
+|#
+(require :asdf)
+(load (merge-pathnames "roswell/bootstrap.lisp"
+        (uiop:ensure-directory-pathname (uiop:getenv "SKILL_EVAL_ENGINE_ROOT"))))
+(40ants-ai-evals/checks:load-check-systems
+ (vector (serapeum:dict "system" "40ants-ai-evals-common-lisp-checks"
+                        "asd"
+                        "evals/checks/writing-common-lisp/40ants-ai-evals-common-lisp-checks.asd")))
+
+(uiop:define-package #:40ants-ai-skills/roswell/check-lisp
+  (:use #:cl))
+(in-package #:40ants-ai-skills/roswell/check-lisp)
+
+(serapeum:-> main (string string string)
+    t)
+(defun main (filename package-name test-name)
+  ;; A process deadline cannot be swallowed by a candidate's ERROR handler.
+  (let ((deadline (sb-ext:make-timer (lambda () (sb-ext:exit :code 124 :abort t)))))
+    (sb-ext:schedule-timer deadline 18)
+    (unwind-protect
+         (let ((evidence (40ants-ai-evals-common-lisp-checks/lisp-reader:inspect-source
+                          filename package-name test-name)))
+           (format t "EVAL_JSON:~A~%" (40ants-ai-evals/util:encode evidence)))
+      (sb-ext:unschedule-timer deadline))))

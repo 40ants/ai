@@ -1,0 +1,386 @@
+[
+  {
+    "description": "smoke: Use $lint-common-lisp",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $lint-common-lisp. Run both project linters, fix the unused import in demo/src/core with minimal edits, run the applicable test command, and rerun both tools. Do not install dependencies.",
+      "shouldTrigger": true,
+      "fixtures": "cases/smoke/fixtures/",
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*(?:src/core[.]lisp|format)",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              },
+              {
+                "pattern": "(?is)40ants-linter.*--imports.*(?:-s|--system).*demo",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/smoke/assertions.lisp"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:test-system.*demo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "scope-vendor: Use $lint-common-lisp",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "scope-vendor",
+      "group": "development",
+      "task": "Use $lint-common-lisp. Lint and fix tracked project Common Lisp sources with both applicable linters. Keep vendor/broken.lisp untouched and exclude it from tool scope. Run tests after changes and rerun tools.",
+      "shouldTrigger": true,
+      "fixtures": "cases/scope-vendor/fixtures/",
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "scope-vendor"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*(?:src/core[.]lisp|format)",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              },
+              {
+                "pattern": "(?is)40ants-linter.*--imports.*(?:-s|--system).*demo",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/scope-vendor/assertions.lisp"
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "vendor/broken.lisp",
+            "text": "(this vendor file is intentionally unbalanced\n"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:test-system.*demo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "missing-tool: Use $lint-common-lisp",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "missing-tool",
+      "group": "development",
+      "task": "Use $lint-common-lisp. Review src/core.lisp with the available tools. This fixture deliberately has no ASDF system and no 40ants-linter executable, and networking/installations are forbidden. Run Mallet and explain precisely which import verification could not be applied. Preserve this source.",
+      "shouldTrigger": true,
+      "fixtures": "cases/missing-tool/fixtures/",
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "missing-tool"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*src/core[.]lisp"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "src/core.lisp",
+            "text": "(uiop:define-package #:demo/src/core\n  (:use #:cl)\n  (:export #:add)\n)\n(in-package #:demo/src/core)\n(defun add (a b) (+ a b))\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-runtime-import: Use $lint-common-lisp",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "heldout-runtime-import",
+      "group": "holdout",
+      "task": "Use $lint-common-lisp. Run both linters on demo, resolve actionable issues, preserve imports used by qualified symbols, verify ADD at runtime, and rerun. Do not remove SERAPEUM:DICT: it builds the response object.",
+      "shouldTrigger": true,
+      "fixtures": "cases/heldout-runtime-import/fixtures/",
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "heldout-runtime-import"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*(?:src/core[.]lisp|format)",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              },
+              {
+                "pattern": "(?is)40ants-linter.*--imports.*(?:-s|--system).*demo",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp"
+            ],
+            "systems": [
+              "serapeum"
+            ],
+            "assertionsFile": "cases/heldout-runtime-import/assertions.lisp"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:test-system.*demo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: Review demo Common Lisp sources for lint errors, including missing and unused package imports",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "automatic",
+      "group": "development",
+      "task": "Review demo Common Lisp sources for lint errors, including missing and unused package imports. Run both applicable linters, fix minimally, test, and rerun. Do not install dependencies.",
+      "shouldTrigger": true,
+      "fixtures": "cases/automatic/fixtures/",
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)mallet.*(?:src/core[.]lisp|format)",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              },
+              {
+                "pattern": "(?is)40ants-linter.*--imports.*(?:-s|--system).*demo",
+                "minimum": 2,
+                "forbiddenOutput": "(?im)^(?:WARNING:|ERROR:|Unhandled |; caught [1-9].*(?:WARNING|ERROR))"
+              }
+            ]
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/automatic/assertions.lisp"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:test-system.*demo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "lint-common-lisp",
+      "skillName": "lint-common-lisp",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "environmentProfile": "lint",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

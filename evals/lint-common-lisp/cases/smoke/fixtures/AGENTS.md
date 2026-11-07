@@ -1,0 +1,1 @@
+After source changes run the complete fixture test suite: qlot exec ros run -- --non-interactive --eval '(asdf:test-system "demo")' --quit. Do not edit tests or the test-op configuration to mask source failures.

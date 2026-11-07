@@ -1,0 +1,13 @@
+# Rebuild with nix-shell / apm install --frozen. Keep manifests in Git.
+.evals/
+apm_modules/
+.agents/skills/promptfoo-*/
+.apm/
+
+.qlot/
+
+# 40ants-doc local output
+/docs/build/
+
+# Per-process compiler outputs; project dependencies remain pinned by Qlot.
+/.eval-cache/

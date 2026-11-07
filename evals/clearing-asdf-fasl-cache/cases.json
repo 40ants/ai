@@ -1,0 +1,278 @@
+[
+  {
+    "description": "smoke: Use $clearing-asdf-fasl-cache",
+    "vars": {
+      "suite": "clearing-asdf-fasl-cache",
+      "skillName": "clearing-asdf-fasl-cache",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $clearing-asdf-fasl-cache. Clear stale ASDF fasls for the current demo project only. This project uses custom ASDF output translations under .eval-cache/, not the default user cache. Inspect .eval-environment.json for exact projectPaths and foreignPaths. Read the skill helper and adapt safely to this explicit cache layout if it assumes a default cache. Do not change HOME or project source. After removing stale entries, configure ASDF output translations to .eval-cache/rebuilt/, force-load the demo system, and verify DEMO/SRC/COUNTER:VALUE returns 2. Dependencies are preinstalled; do not install anything.",
+      "shouldTrigger": true,
+      "fixtures": "cases/smoke/fixtures/",
+      "environmentProfile": "cache",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/cache-state",
+          "params": {}
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:load-system.*demo",
+                "output": "2"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "multi-version: Use $clearing-asdf-fasl-cache",
+    "vars": {
+      "suite": "clearing-asdf-fasl-cache",
+      "skillName": "clearing-asdf-fasl-cache",
+      "id": "multi-version",
+      "group": "development",
+      "task": "Use $clearing-asdf-fasl-cache. Clear all SBCL-version and architecture caches belonging to this demo project. This project uses custom ASDF output translations under .eval-cache/, not the default user cache. Inspect .eval-environment.json for exact projectPaths and foreignPaths. Read the skill helper and adapt safely to this explicit cache layout if it assumes a default cache. Do not change HOME or project source. After removing stale entries, configure ASDF output translations to .eval-cache/rebuilt/, force-load the demo system, and verify DEMO/SRC/COUNTER:VALUE returns 2. Dependencies are preinstalled; do not install anything.",
+      "shouldTrigger": true,
+      "fixtures": "cases/multi-version/fixtures/",
+      "environmentProfile": "cache",
+      "scenario": {
+        "name": "multi-version"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/cache-state",
+          "params": {}
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:load-system.*demo",
+                "output": "2"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "path-spaces: explicit target project path containing spaces",
+    "vars": {
+      "suite": "clearing-asdf-fasl-cache",
+      "skillName": "clearing-asdf-fasl-cache",
+      "id": "path-spaces",
+      "group": "development",
+      "task": "Use $clearing-asdf-fasl-cache. Clear stale ASDF fasls for the explicit project path containing spaces shown in .eval-environment.json. This project uses custom ASDF output translations under .eval-cache/, not the default user cache. Inspect .eval-environment.json for exact projectPaths and foreignPaths. Read the skill helper and adapt safely to this explicit cache layout if it assumes a default cache. Do not change HOME or project source. After removing stale entries, configure ASDF output translations to .eval-cache/rebuilt/, force-load the demo system, and verify DEMO/SRC/COUNTER:VALUE returns 2. Dependencies are preinstalled; do not install anything.",
+      "shouldTrigger": true,
+      "fixtures": "cases/path-spaces/fixtures/",
+      "environmentProfile": "cache",
+      "scenario": {
+        "name": "path-spaces"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/cache-state",
+          "params": {}
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:load-system.*demo",
+                "output": "2"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-missing-cache: missing project cache is a safe no-op",
+    "vars": {
+      "suite": "clearing-asdf-fasl-cache",
+      "skillName": "clearing-asdf-fasl-cache",
+      "id": "heldout-missing-cache",
+      "group": "holdout",
+      "task": "Use $clearing-asdf-fasl-cache. Clear stale cache for the explicit target project in .eval-environment.json. Its cache does not exist. Treat this as a safe no-op and leave sibling foreign-project caches byte-for-byte unchanged. Custom ASDF output translations point into .eval-cache/. Do not change HOME, create caches, or rebuild anything.",
+      "shouldTrigger": true,
+      "fixtures": "cases/heldout-missing-cache/fixtures/",
+      "environmentProfile": "cache",
+      "scenario": {
+        "name": "heldout-missing-cache"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/cache-state",
+          "params": {
+            "missing": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: This demo project still uses old docstrings after recompilation",
+    "vars": {
+      "suite": "clearing-asdf-fasl-cache",
+      "skillName": "clearing-asdf-fasl-cache",
+      "id": "automatic",
+      "group": "development",
+      "task": "This demo project still uses old docstrings after recompilation. Diagnose the stale ASDF fasl cache and clear only this project across SBCL versions, preserving other projects. This project uses custom ASDF output translations under .eval-cache/. Inspect .eval-environment.json for exact projectPaths and foreignPaths. Do not change HOME. After removing stale entries, configure ASDF output translations to .eval-cache/rebuilt/, force-load the demo system, and verify DEMO/SRC/COUNTER:VALUE returns 2. Dependencies are preinstalled; do not install anything.",
+      "shouldTrigger": true,
+      "fixtures": "cases/automatic/fixtures/",
+      "environmentProfile": "cache",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/cache-state",
+          "params": {}
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?is)asdf:load-system.*demo",
+                "output": "2"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "clearing-asdf-fasl-cache",
+      "skillName": "clearing-asdf-fasl-cache",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "environmentProfile": "cache",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

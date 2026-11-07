@@ -1,0 +1,10 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- "$0" "$@"
+|#
+(require :asdf)
+(let ((engine (uiop:getenv "SKILL_EVAL_ENGINE_ROOT")))
+  (unless engine (error "Enter the project nix-shell to load the pinned eval library"))
+  (load (merge-pathnames "roswell/entry.lisp" (uiop:ensure-directory-pathname engine))))
+(in-package #:40ants-ai-evals/roswell/ai-evals)

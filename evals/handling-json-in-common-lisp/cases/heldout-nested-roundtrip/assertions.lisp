@@ -1,0 +1,7 @@
+(let* ((input "{\"outer\":[{},[],false,null,\"\"]}")
+       (out (demo/src/json:roundtrip input))
+       (a (yason:parse input :json-arrays-as-vectors t :json-booleans-as-symbols t :json-nulls-as-keyword t))
+       (b (yason:parse out :json-arrays-as-vectors t :json-booleans-as-symbols t :json-nulls-as-keyword t)))
+  (assert (hash-table-p (aref (gethash "outer" b) 0)))
+  (assert (equalp (subseq (gethash "outer" a) 1)
+                  (subseq (gethash "outer" b) 1))))

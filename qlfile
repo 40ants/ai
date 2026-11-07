@@ -1,0 +1,11 @@
+# Use the same Quicklisp release as the pre-migration Nix Lisp packages.
+ql :all 2026-01-01
+
+# Documentation theme is absent from this Quicklisp snapshot; pin its source.
+github 40ants-doc-theme-40ants 40ants/40ants-doc-theme-40ants :ref 5172e5447da6ddf473861f123bb62f6627412bc1
+
+# Lint tools are not in Quicklisp 2026-01-01.
+github mallet fukamachi/mallet :ref 553c9092239e8a215dfb88650cc8facd2569be2b
+github 40ants-linter 40ants/linter :ref 1a1ec50537c2167a61c533b56b252768ec986fd1
+github trivial-glob fukamachi/trivial-glob :ref 0c2675d9452ed164970f2fc4a0e41784ebee819a
+github sblint cxxxr/sblint :ref 1037296f604c3210ce073a53539d4ae95b0c2f8c

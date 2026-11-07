@@ -1,0 +1,8 @@
+(setf demo/src/core:*counter* 41)
+(assert (= 9 (demo/src/core:with-temp-counter 9 (lambda () demo/src/core:*counter*))))
+(assert (= 41 demo/src/core:*counter*))
+(handler-case (demo/src/core:with-temp-counter 3 (lambda ()
+                                                   (error "expected")))
+  (error () nil))
+(assert (= 41 demo/src/core:*counter*))
+(assert (rove:run-test 'demo-tests/core-test::global-state))

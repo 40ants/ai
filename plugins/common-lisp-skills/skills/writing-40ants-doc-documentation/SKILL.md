@@ -81,7 +81,8 @@ Overview text...
 ```lisp
 (uiop:define-package #:project-docs/changelog
   (:use #:cl)
-  (:import-from #:40ants-doc/changelog #:defchangelog))
+  (:import-from #:40ants-doc/changelog #:defchangelog)
+  (:export #:@changelog))
 (in-package #:project-docs/changelog)
 
 (defchangelog (:ignore-words ("ASDF" "REPL"))
@@ -89,38 +90,57 @@ Overview text...
          "* Initial public version."))
 ```
 
-### Build Prerequisites
+Export `@changelog` from its package and import/re-export it from the loaded
+documentation entry package, as in the examples above. Keep it as a standalone
+root section: do not put `(@changelog section)` inside `@index`. The pinned
+`docs-builder` discovers exported root sections named `@CHANGELOG`, includes them
+in HTML, and uses them to generate `ChangeLog.md`. Nesting the section under
+`@index` removes it from that root discovery. If the file is missing after a
+successful build, check loading, exports, and root membership before searching
+for another build API or installing tools.
 
-`.qlot/bin/build-docs` is the entry point. If it is missing from the project,
-install it once. **The `ros install` target is the GitHub repository
-`40ants/docs-builder`** — the quicklisp system name `40ants-docs-builder` is NOT
-a valid `ros install` target and will fail with "is not a valid target":
+### Build in the project environment
+
+Run every shell command through `qlot exec`, including inspection and builds.
+Prefer the project's existing Roswell build script when it has one. Keep the
+project's Qlot library versions and source registry; do not search global Lisp
+installations or install a wrapper when the needed libraries are already present.
+
+The `build-docs` executable is optional. With `docs-builder` in the project's
+installed Qlot dependencies, build from the project root in a fresh process:
 
 ```bash
-qlot exec ros install 40ants/docs-builder
+qlot exec sbcl --non-interactive \
+  --eval '(asdf:load-system "docs-builder")' \
+  --eval '(docs-builder:build "project-docs" :error-on-warnings t :local t)'
 ```
 
-This creates `.qlot/bin/build-docs`.
+Replace `project-docs` with the actual documentation system. This uses the same
+builder as the CLI and regenerates README, changelog and local HTML sections.
+Keep the initialization and build in the same process. There is no need for a
+`.qlot/bin/build-docs` file to use this API.
 
-### Build
+Keep the complete build output and the real process exit status visible. Run the
+build command directly; piping it through `tail`, `grep`, or another filter can
+hide warnings, the completion message, and a failed builder exit status. If the
+project saves a full build log, inspect that log in a separate command afterward.
+Do not rerun the build inside a filtering pipeline as the final verification.
 
-Run from the project root. Set `CL_SOURCE_REGISTRY` so ASDF resolves the local
-project:
+If a project explicitly requires its installed CLI wrapper, run it through
+Roswell inside Qlot:
 
 ```bash
-CL_SOURCE_REGISTRY=$(pwd)/ .qlot/bin/build-docs project-docs
+qlot exec ros .qlot/bin/build-docs project-docs
 ```
 
-Do **not** wrap `.qlot/bin/build-docs` in `qlot exec` — the script self-bootstraps
-the qlot Lisp image, so `qlot exec .qlot/bin/build-docs` only prints a spurious
-"No need to exec scripts in .qlot/bin/" warning.
+Only install that wrapper when environment setup is requested and installation
+is allowed. The Roswell repository target is `40ants/docs-builder`, not the
+Quicklisp system name `40ants-docs-builder`.
 
-**Zero warnings required with default settings** (`error-on-warnings: true`). If warnings remain, fix them at the source — do not silence with `-e false`.
-
-Use `-e false` only as a temporary workaround during development:
-```bash
-CL_SOURCE_REGISTRY=$(pwd)/ .qlot/bin/build-docs -e false project-docs
-```
+**Zero warnings required with default settings** (`error-on-warnings: true`).
+Fix warnings at their source; do not disable strict checking to finish a task.
+Keep dependency startup diagnostics separate from documentation build warnings;
+do not edit pinned libraries to hide their load-time messages.
 
 ### MANDATORY: Rebuild and Verify After Every Documentation Change
 
@@ -137,9 +157,9 @@ Rebuild whenever you touch any of:
 - anything that changes the set of documented symbols or their source locations
 
 Verification checklist:
-1. Run `CL_SOURCE_REGISTRY=$(pwd)/ .qlot/bin/build-docs project-docs`.
+1. Run the existing project build command or the strict Qlot/API command above.
 2. Confirm the command exits 0 and the final log line is `Done`.
-3. Confirm there are **no** warning/error lines, in particular:
+3. Confirm the strict builder reports **no documentation warnings or errors**, in particular:
    - `Object referenced as #<XREF "..."> is not documented`
    - `No source location found for reference`
    - `These symbols are external, but not documented`
@@ -238,4 +258,7 @@ If `build-docs` does not pick up source changes (docstrings, defgeneric forms, e
 
 ## Local Validation Without `.qlot/bin/build-docs`
 
-If the project-local `build-docs` wrapper is missing but you have a live Lisp image with the needed systems loaded, you can still validate the docs source by loading the docs system and invoking the builder from the REPL. Use this as a local diagnostic aid, not as a reason to change project policy around generated files.
+Use the strict fresh-process API command above, or load `docs-builder` in the
+project's existing REPL and call the same `docs-builder:build` entry point.
+Missing CLI wrappers are not missing libraries. If the library itself is absent
+and installing dependencies is forbidden, report the missing prerequisite.

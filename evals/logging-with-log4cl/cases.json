@@ -1,0 +1,268 @@
+[
+  {
+    "description": "smoke: Use $logging-with-log4cl",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $logging-with-log4cl. Implement REPORT-PATH(path) in src/logger.lisp to log an info message containing the path literally. Input may contain tildes; keep diagnostics redirectable.",
+      "shouldTrigger": true,
+      "fixtures": "cases/smoke/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/logger.lisp"
+            ],
+            "systems": [
+              "log4cl"
+            ],
+            "assertionsFile": "cases/smoke/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "formatted-count: Use $logging-with-log4cl",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "formatted-count",
+      "group": "development",
+      "task": "Use $logging-with-log4cl. Implement REPORT-COUNT(count,elapsed) in src/logger.lisp logging info text \"Processed N rows in M ms\" with the provided values.",
+      "shouldTrigger": true,
+      "fixtures": "cases/formatted-count/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "formatted-count"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/logger.lisp"
+            ],
+            "systems": [
+              "log4cl"
+            ],
+            "assertionsFile": "cases/formatted-count/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "package-inference: Use $logging-with-log4cl",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "package-inference",
+      "group": "development",
+      "task": "Use $logging-with-log4cl. Add REPORT-PATH(path) logging the literal path to package-inferred demo/src/logger and wire its dependency so loading system demo in a fresh image works without preloading LOG. Keep log: prefix.",
+      "shouldTrigger": true,
+      "fixtures": "cases/package-inference/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "package-inference"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [],
+            "assertionsFile": "cases/package-inference/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-error-value: Use $logging-with-log4cl",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "heldout-error-value",
+      "group": "holdout",
+      "task": "Use $logging-with-log4cl. Implement REPORT-ERROR(value) in src/logger.lisp. Log an error containing the complete dynamic value, including literal format directives. Do not treat input as a format control.",
+      "shouldTrigger": true,
+      "fixtures": "cases/heldout-error-value/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "heldout-error-value"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/logger.lisp"
+            ],
+            "systems": [
+              "log4cl"
+            ],
+            "assertionsFile": "cases/heldout-error-value/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: In this Common Lisp log4cl project implement REPORT-PATH(path) in src/logger",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "automatic",
+      "group": "development",
+      "task": "In this Common Lisp log4cl project implement REPORT-PATH(path) in src/logger.lisp. It must emit an info message with the path literally, including tildes, through the project logger.",
+      "shouldTrigger": true,
+      "fixtures": "cases/automatic/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/logger.lisp"
+            ],
+            "systems": [
+              "log4cl"
+            ],
+            "assertionsFile": "cases/automatic/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "logging-with-log4cl",
+      "skillName": "logging-with-log4cl",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

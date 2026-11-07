@@ -1,0 +1,275 @@
+[
+  {
+    "description": "smoke: Use $testing-with-rove",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $testing-with-rove. Add DEFTEST named POSITIVE-COUNT to tests/core-test.lisp testing src/core.lisp valid positive counts and that zero signals DEMO/SRC/CORE:INVALID-COUNT. Use the correct Rove signals argument order.",
+      "shouldTrigger": true,
+      "fixtures": "cases/smoke/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp",
+              "tests/core-test.lisp"
+            ],
+            "systems": [
+              "rove"
+            ],
+            "assertionsFile": "cases/smoke/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "test-op: Use $testing-with-rove",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "test-op",
+      "group": "development",
+      "task": "Use $testing-with-rove. Wire demo.asd test-op to demo-tests, and create demo-tests.asd plus tests/core-test.lisp. The positive-count test covers positive return and zero signaling invalid-count. ASDF:TEST-SYSTEM \"demo\" must execute the Rove suite and fail when assertions fail.",
+      "shouldTrigger": true,
+      "fixtures": "cases/test-op/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "test-op"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [],
+            "systems": [
+              "rove"
+            ],
+            "assertionsFile": "cases/test-op/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "global-restoration: Use $testing-with-rove",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "global-restoration",
+      "group": "development",
+      "task": "Use $testing-with-rove. In tests/core-test.lisp add test GLOBAL-STATE for DEMO/SRC/CORE:WITH-TEMP-COUNTER. Verify temporary mutation and restoration even on an error; the global uses global-vars:define-global-var and must not be LET-bound. Add the helper in src/core.lisp. It takes a value and thunk and restores *COUNTER* with unwind-protect.",
+      "shouldTrigger": true,
+      "fixtures": "cases/global-restoration/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "global-restoration"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp",
+              "tests/core-test.lisp"
+            ],
+            "systems": [
+              "rove",
+              "global-vars"
+            ],
+            "assertionsFile": "cases/global-restoration/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-specific-condition: Use $testing-with-rove",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "heldout-specific-condition",
+      "group": "holdout",
+      "task": "Use $testing-with-rove. Add test POSITIVE-COUNT to tests/core-test.lisp. Test positive return, and assert that both zero and -5 signal specifically DEMO/SRC/CORE:INVALID-COUNT. Do not accept an unrelated error as success.",
+      "shouldTrigger": true,
+      "fixtures": "cases/heldout-specific-condition/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "heldout-specific-condition"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp",
+              "tests/core-test.lisp"
+            ],
+            "systems": [
+              "rove"
+            ],
+            "assertionsFile": "cases/heldout-specific-condition/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: Add a Rove DEFTEST named POSITIVE-COUNT in tests/core-test",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "automatic",
+      "group": "development",
+      "task": "Add a Rove DEFTEST named POSITIVE-COUNT in tests/core-test.lisp testing src/core.lisp valid positive counts and that zero signals the specific INVALID-COUNT condition.",
+      "shouldTrigger": true,
+      "fixtures": "cases/automatic/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/core.lisp",
+              "tests/core-test.lisp"
+            ],
+            "systems": [
+              "rove"
+            ],
+            "assertionsFile": "cases/automatic/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "testing-with-rove",
+      "skillName": "testing-with-rove",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

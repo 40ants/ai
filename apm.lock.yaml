@@ -1,0 +1,255 @@
+lockfile_version: '1'
+apm_version: 0.31.0
+dependencies:
+- repo_url: promptfoo/promptfoo
+  name: promptfoo
+  host: github.com
+  resolved_commit: 5582f347bbc5359b201ce2d48c9c7fbebd8dcbd9
+  resolved_ref: 5582f347bbc5359b201ce2d48c9c7fbebd8dcbd9
+  version: 0.1.5
+  virtual_path: plugins/promptfoo
+  is_virtual: true
+  package_type: skill_bundle
+  deployed_files:
+  - .agents/skills/promptfoo-evals
+  - .agents/skills/promptfoo-evals/SKILL.md
+  - .agents/skills/promptfoo-evals/agents/openai.yaml
+  - .agents/skills/promptfoo-evals/references/eval-patterns.md
+  - .agents/skills/promptfoo-provider-setup
+  - .agents/skills/promptfoo-provider-setup/SKILL.md
+  - .agents/skills/promptfoo-provider-setup/agents/openai.yaml
+  - .agents/skills/promptfoo-provider-setup/references/provider-patterns.md
+  - .agents/skills/promptfoo-provider-setup/scripts/openapi-helpers.mjs
+  - .agents/skills/promptfoo-provider-setup/scripts/openapi-operation-to-config.mjs
+  - .agents/skills/promptfoo-provider-setup/scripts/response-contract.mjs
+  - .agents/skills/promptfoo-provider-setup/scripts/vendor/LICENSE
+  - .agents/skills/promptfoo-provider-setup/scripts/vendor/js-yaml.mjs
+  - .agents/skills/promptfoo-redteam-run
+  - .agents/skills/promptfoo-redteam-run/SKILL.md
+  - .agents/skills/promptfoo-redteam-run/agents/openai.yaml
+  - .agents/skills/promptfoo-redteam-run/references/redteam-run-patterns.md
+  - .agents/skills/promptfoo-redteam-setup
+  - .agents/skills/promptfoo-redteam-setup/SKILL.md
+  - .agents/skills/promptfoo-redteam-setup/agents/openai.yaml
+  - .agents/skills/promptfoo-redteam-setup/references/redteam-setup-patterns.md
+  - .agents/skills/promptfoo-redteam-setup/scripts/openapi-operation-to-redteam-config.mjs
+  deployed_file_hashes:
+    .agents/skills/promptfoo-evals/SKILL.md: sha256:897473f598d1b96816f08c755fa83c9cbf85b4012ba0ce28213faaa5f5df63e3
+    .agents/skills/promptfoo-evals/agents/openai.yaml: sha256:9632b009a937b9ed6d4c9319e6b0c2a2cc20f3b4d0dac78cc90cbeef1f6f7b83
+    .agents/skills/promptfoo-evals/references/eval-patterns.md: sha256:6a546f974d815ad4420ab40884284bf7853b5cdfcdad7c398280be61db7e0f26
+    .agents/skills/promptfoo-provider-setup/SKILL.md: sha256:cf0c1c7f1b12a8043324c80d72e4e35df7c9f688d2a8f0ca89a8b8f79651ec06
+    .agents/skills/promptfoo-provider-setup/agents/openai.yaml: sha256:0f0fbe09c9ee060fa1e1ab03bc284fc6ae00286bf77e17ac151ce0ceb807b3da
+    .agents/skills/promptfoo-provider-setup/references/provider-patterns.md: sha256:bc22c2bd3f97dbdaab067241d5f147983132ef24401874588ccbf9829b6cef60
+    .agents/skills/promptfoo-provider-setup/scripts/openapi-helpers.mjs: sha256:19af1a9216174e14a9f53978ea226a3f40e92cdd1750e1a4f6105259ef0ff79e
+    .agents/skills/promptfoo-provider-setup/scripts/openapi-operation-to-config.mjs: sha256:edf684937469be6361b8e775e40042a595e17176cee4d3ebbf67e7feb96c5b80
+    .agents/skills/promptfoo-provider-setup/scripts/response-contract.mjs: sha256:999d97a338e41e74784dbb0a7a57884ee0899219f2877c6c9b25c5e3dc222267
+    .agents/skills/promptfoo-provider-setup/scripts/vendor/LICENSE: sha256:a07bc24468b9654ce76a547d47a2db282d07733b715db4c73a98bd63961f9550
+    .agents/skills/promptfoo-provider-setup/scripts/vendor/js-yaml.mjs: sha256:6cd26e4f20dbf81ede5cc19ef86e6a03fe95e22f34d358e0f20a83357d93b1d1
+    .agents/skills/promptfoo-redteam-run/SKILL.md: sha256:e415f8aa8a4701c68307e52c44ed30d4c562f1d75acf2510c2b4ef8e753fab91
+    .agents/skills/promptfoo-redteam-run/agents/openai.yaml: sha256:b7b9861a9a373290387c91b55384556b7acbdac7f366c120b64e8cd052dc91af
+    .agents/skills/promptfoo-redteam-run/references/redteam-run-patterns.md: sha256:1b73169dea967d83751fb798450151d1c7c0042ad92e32501cbb4a237466f291
+    .agents/skills/promptfoo-redteam-setup/SKILL.md: sha256:1b7328db864449e439dc9529a2b3688d841db9c44e1d79aa4e9f5f3be911a9b4
+    .agents/skills/promptfoo-redteam-setup/agents/openai.yaml: sha256:706c63bd2f40845470b64fda8ff909d6ead42d7a700fbc72f50e4a24bcfea38e
+    .agents/skills/promptfoo-redteam-setup/references/redteam-setup-patterns.md: sha256:bd097aae1c4a0d07652b1c2f07bfb5dea0c2a720fdcfc8e3e76d22c10381acce
+    .agents/skills/promptfoo-redteam-setup/scripts/openapi-operation-to-redteam-config.mjs: sha256:73896e229e6a809ca91f03a6cea97f4c2252c2e5852063fb298da917cd0aa8c9
+  content_hash: sha256:700a41779796b7ed806f08ae636c1233da4ded87381cb3463532da2b6dfa9e9b
+  declared_license: MIT
+deployments:
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-evals
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-evals/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:897473f598d1b96816f08c755fa83c9cbf85b4012ba0ce28213faaa5f5df63e3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-evals/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:9632b009a937b9ed6d4c9319e6b0c2a2cc20f3b4d0dac78cc90cbeef1f6f7b83
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-evals/references/eval-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:6a546f974d815ad4420ab40884284bf7853b5cdfcdad7c398280be61db7e0f26
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:cf0c1c7f1b12a8043324c80d72e4e35df7c9f688d2a8f0ca89a8b8f79651ec06
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:0f0fbe09c9ee060fa1e1ab03bc284fc6ae00286bf77e17ac151ce0ceb807b3da
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup/references/provider-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:bc22c2bd3f97dbdaab067241d5f147983132ef24401874588ccbf9829b6cef60
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup/scripts/openapi-helpers.mjs
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:19af1a9216174e14a9f53978ea226a3f40e92cdd1750e1a4f6105259ef0ff79e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup/scripts/openapi-operation-to-config.mjs
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:edf684937469be6361b8e775e40042a595e17176cee4d3ebbf67e7feb96c5b80
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup/scripts/response-contract.mjs
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:999d97a338e41e74784dbb0a7a57884ee0899219f2877c6c9b25c5e3dc222267
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup/scripts/vendor/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:a07bc24468b9654ce76a547d47a2db282d07733b715db4c73a98bd63961f9550
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-provider-setup/scripts/vendor/js-yaml.mjs
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:6cd26e4f20dbf81ede5cc19ef86e6a03fe95e22f34d358e0f20a83357d93b1d1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-run
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-run/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:e415f8aa8a4701c68307e52c44ed30d4c562f1d75acf2510c2b4ef8e753fab91
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-run/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:b7b9861a9a373290387c91b55384556b7acbdac7f366c120b64e8cd052dc91af
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-run/references/redteam-run-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:1b73169dea967d83751fb798450151d1c7c0042ad92e32501cbb4a237466f291
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-setup
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-setup/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:1b7328db864449e439dc9529a2b3688d841db9c44e1d79aa4e9f5f3be911a9b4
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-setup/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:706c63bd2f40845470b64fda8ff909d6ead42d7a700fbc72f50e4a24bcfea38e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-setup/references/redteam-setup-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:bd097aae1c4a0d07652b1c2f07bfb5dea0c2a720fdcfc8e3e76d22c10381acce
+- kind: project-relative
+  target: codex
+  value: .agents/skills/promptfoo-redteam-setup/scripts/openapi-operation-to-redteam-config.mjs
+  runtime: null
+  scope: project
+  owners:
+  - promptfoo/promptfoo/plugins/promptfoo
+  active_owner: promptfoo/promptfoo/plugins/promptfoo
+  content_hash: sha256:73896e229e6a809ca91f03a6cea97f4c2252c2e5852063fb298da917cd0aa8c9

@@ -1,0 +1,262 @@
+[
+  {
+    "description": "smoke: Use $defining-clos-classes",
+    "vars": {
+      "suite": "defining-clos-classes",
+      "skillName": "defining-clos-classes",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $defining-clos-classes. Create class SESSION in src/session.lisp with required project-dir and optional state default NIL. Export MAKE-SESSION, SESSION-PROJECT-DIR, SESSION-STATE. Constructor hides MAKE-INSTANCE and forwards optional keys without copying defaults.",
+      "shouldTrigger": true,
+      "fixtures": "cases/smoke/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/session.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/smoke/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "optional-string: Use $defining-clos-classes",
+    "vars": {
+      "suite": "defining-clos-classes",
+      "skillName": "defining-clos-classes",
+      "id": "optional-string",
+      "group": "development",
+      "task": "Use $defining-clos-classes. Create SESSION and MAKE-SESSION(project-dir,&key owner) in src/session.lisp. OWNER is an optional string defaulting to NIL, declared with a precise compatible CLOS type. Export constructor and SESSION-OWNER.",
+      "shouldTrigger": true,
+      "fixtures": "cases/optional-string/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "optional-string"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/session.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/optional-string/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "add-slot: Use $defining-clos-classes",
+    "vars": {
+      "suite": "defining-clos-classes",
+      "skillName": "defining-clos-classes",
+      "id": "add-slot",
+      "group": "development",
+      "task": "Use $defining-clos-classes. Add optional TIMEOUT slot default 30 to existing SESSION and expose SESSION-TIMEOUT. Accept :timeout in MAKE-SESSION while preserving its forwarding constructor body and STATE default.",
+      "shouldTrigger": true,
+      "fixtures": "cases/add-slot/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "add-slot"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/session.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/add-slot/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-instance-default: Use $defining-clos-classes",
+    "vars": {
+      "suite": "defining-clos-classes",
+      "skillName": "defining-clos-classes",
+      "id": "heldout-instance-default",
+      "group": "holdout",
+      "task": "Use $defining-clos-classes. Create QUEUE with a required name and optional ITEMS default (make-array 0 :adjustable t :fill-pointer 0). Export MAKE-QUEUE and QUEUE-ITEMS from src/session.lisp. Each omitted default must create its own vector; an explicitly supplied vector must be preserved.",
+      "shouldTrigger": true,
+      "fixtures": "cases/heldout-instance-default/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "heldout-instance-default"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/session.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/heldout-instance-default/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: Create class SESSION in src/session",
+    "vars": {
+      "suite": "defining-clos-classes",
+      "skillName": "defining-clos-classes",
+      "id": "automatic",
+      "group": "development",
+      "task": "Create class SESSION in src/session.lisp with required project-dir and optional state default NIL. Export MAKE-SESSION, SESSION-PROJECT-DIR, SESSION-STATE. Constructor hides MAKE-INSTANCE and forwards optional keys without copying defaults.",
+      "shouldTrigger": true,
+      "fixtures": "cases/automatic/fixtures/",
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/lisp-runtime",
+          "params": {
+            "loadFiles": [
+              "src/session.lisp"
+            ],
+            "systems": [],
+            "assertionsFile": "cases/automatic/assertions.lisp"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "defining-clos-classes",
+      "skillName": "defining-clos-classes",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "environmentProfile": "lisp",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "description": "writing-40ants-doc-documentation observable behavior (native Codex SDK)",
+  "defaultTest": {
+    "vars": {
+      "checkSystems": [
+        {
+          "system": "40ants-ai-evals-common-checks"
+        },
+        {
+          "system": "40ants-ai-evals-skill-behavior-checks",
+          "asd": "evals/checks/skill-behavior/40ants-ai-evals-skill-behavior-checks.asd"
+        }
+      ],
+      "checks": [
+        {
+          "profile": "common/contract"
+        }
+      ]
+    }
+  },
+  "evaluateOptions": {
+    "maxConcurrency": 1
+  },
+  "tests": "file://cases.json"
+}

@@ -1,0 +1,293 @@
+[
+  {
+    "description": "smoke: Use $nix-shell-playwright",
+    "vars": {
+      "suite": "nix-shell-playwright",
+      "skillName": "nix-shell-playwright",
+      "id": "smoke",
+      "group": "development",
+      "task": "Use $nix-shell-playwright. Bootstrap a reproducible Python Playwright environment, generate smoke_test.py for static index.html and about.html, run ./run_smoke_test.sh, and review desktop and mobile screenshots for both pages in test-shots/. Prefer file navigation. Use the pinned local Chromium path in .eval-environment.json.",
+      "shouldTrigger": true,
+      "fixtures": "cases/smoke/fixtures/",
+      "environmentProfile": "playwright",
+      "scenario": {
+        "name": "smoke"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/browser-artifacts",
+          "params": {
+            "pages": [
+              "index",
+              "about"
+            ]
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?m)(?:^|[;&\\n]\\s*)(?:env\\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=(?:\"[^\"]*\"|'[^']*'|[^\\s]+)\\s+)*(?:(?:bash|sh)\\s+)?(?:\\./|/[^ \\n]+/)?run_smoke_test[.]sh(?:\\s|$)"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "server-required: real HTTP application with API data",
+    "vars": {
+      "suite": "nix-shell-playwright",
+      "skillName": "nix-shell-playwright",
+      "id": "server-required",
+      "group": "development",
+      "task": "Use $nix-shell-playwright. This application requires HTTP because index.html fetches /api/message. Start the supplied fixture server with sbcl --script \"$PWD/server.lisp\" in the background and a log file; it self-records .eval-server.pid and writes the selected loopback port to .fixture-server.port. Create the nix-shell Playwright environment and smoke_test.py targeting http://127.0.0.1 at that port. Wait for #message to read \"HTTP fixture loaded\", capture server-desktop.png and server-mobile.png in test-shots/, run ./run_smoke_test.sh and inspect both images. Use pinned local Chromium from .eval-environment.json.",
+      "shouldTrigger": true,
+      "fixtures": "cases/server-required/fixtures/",
+      "environmentProfile": "playwright",
+      "scenario": {
+        "name": "server-required"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/browser-artifacts",
+          "params": {
+            "pages": [
+              "server"
+            ],
+            "http": true
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?m)(?:^|[;&\\n]\\s*)(?:env\\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=(?:\"[^\"]*\"|'[^']*'|[^\\s]+)\\s+)*(?:(?:bash|sh)\\s+)?(?:\\./|/[^ \\n]+/)?run_smoke_test[.]sh(?:\\s|$)"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "missing-browser: actual failed launch produces actionable diagnosis",
+    "vars": {
+      "suite": "nix-shell-playwright",
+      "skillName": "nix-shell-playwright",
+      "id": "missing-browser",
+      "group": "development",
+      "task": "Use $nix-shell-playwright. Bootstrap the environment with the deliberately unavailable browser path \"$PWD/.missing-browser/chromium\" as the bootstrap helper second argument. Generate smoke_test.py for index.html. Run ./run_smoke_test.sh as a standalone command and let its failure propagate, then create diagnostics.txt explaining the observed browser launch failure and how to supply a valid local PLAYWRIGHT_BROWSER_PATH. Do not download or install a browser, hide the failure, or create fake screenshots. This scenario tests diagnosis when a browser executable is missing.",
+      "shouldTrigger": true,
+      "fixtures": "cases/missing-browser/fixtures/",
+      "environmentProfile": "playwright",
+      "scenario": {
+        "name": "missing-browser"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/browser-missing",
+          "params": {
+            "report": "diagnostics.txt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "heldout-existing-shell: Unicode page and preserved project environment",
+    "vars": {
+      "suite": "nix-shell-playwright",
+      "skillName": "nix-shell-playwright",
+      "id": "heldout-existing-shell",
+      "group": "holdout",
+      "task": "Use $nix-shell-playwright. This existing project has a custom shell.nix marker EVAL_KEEP_CUSTOM_SETTING=present that must remain. Add or adapt the Python Playwright helper and smoke_test.py for the Unicode index.html, run ./run_smoke_test.sh, and inspect desktop and mobile screenshots. Preserve the custom shell configuration while making necessary additive changes; use pinned local Chromium from .eval-environment.json.",
+      "shouldTrigger": true,
+      "fixtures": "cases/heldout-existing-shell/fixtures/",
+      "environmentProfile": "playwright",
+      "scenario": {
+        "name": "heldout-existing-shell"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/browser-artifacts",
+          "params": {
+            "pages": [
+              "index"
+            ],
+            "shellMarker": "EVAL_KEEP_CUSTOM_SETTING=present"
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?m)(?:^|[;&\\n]\\s*)(?:env\\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=(?:\"[^\"]*\"|'[^']*'|[^\\s]+)\\s+)*(?:(?:bash|sh)\\s+)?(?:\\./|/[^ \\n]+/)?run_smoke_test[.]sh(?:\\s|$)"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "automatic: This static HTML project needs reproducible Python browser smoke tests through nix-shell",
+    "vars": {
+      "suite": "nix-shell-playwright",
+      "skillName": "nix-shell-playwright",
+      "id": "automatic",
+      "group": "development",
+      "task": "This static HTML project needs reproducible Python browser smoke tests through nix-shell. Create the environment and smoke_test.py for index.html, run the helper, and inspect desktop and mobile screenshots. Use the pinned local Chromium from the environment.",
+      "shouldTrigger": true,
+      "fixtures": "cases/automatic/fixtures/",
+      "environmentProfile": "playwright",
+      "scenario": {
+        "name": "automatic"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": true
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/browser-artifacts",
+          "params": {
+            "pages": [
+              "index"
+            ]
+          }
+        },
+        {
+          "check": "skill/tool-trace",
+          "params": {
+            "requirements": [
+              {
+                "pattern": "(?m)(?:^|[;&\\n]\\s*)(?:env\\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=(?:\"[^\"]*\"|'[^']*'|[^\\s]+)\\s+)*(?:(?:bash|sh)\\s+)?(?:\\./|/[^ \\n]+/)?run_smoke_test[.]sh(?:\\s|$)"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "description": "negative: Create note",
+    "vars": {
+      "suite": "nix-shell-playwright",
+      "skillName": "nix-shell-playwright",
+      "id": "negative",
+      "group": "development",
+      "task": "Create note.txt containing exactly \"scheduled maintenance postponed\" followed by a newline. This is an editorial task; do not run project tools.",
+      "shouldTrigger": false,
+      "environmentProfile": "playwright",
+      "scenario": {
+        "name": "negative"
+      },
+      "checks": [
+        {
+          "check": "agent/skill-read",
+          "params": {
+            "expected": false
+          }
+        },
+        {
+          "check": "files/preserved",
+          "params": {
+            "fixtures": {
+              "$var": "fixtures",
+              "default": {}
+            },
+            "protected": null
+          }
+        },
+        {
+          "check": "skill/exact-file",
+          "params": {
+            "file": "note.txt",
+            "text": "scheduled maintenance postponed\n"
+          }
+        }
+      ]
+    }
+  }
+]
